@@ -1,0 +1,24 @@
+# Open-EZ PDE Dependencies
+# ========================
+
+# Core Geometry Engine (CadQuery with OpenCASCADE kernel)
+cadquery>=2.4.0
+
+# Numerical Computing
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Legacy DXF Parsing
+ezdxf>=1.1.0
+
+# OpenVSP Python API (optional - for aerodynamic validation)
+# Note: OpenVSP must be installed separately from openvsp.org
+# openvsp>=3.35.0
+
+# Development/Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.0.0

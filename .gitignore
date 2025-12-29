@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Project Specific - Manufacturing Artifacts
+output/STEP/
+output/STL/
+output/DXF/
+output/GCODE/
+*.tap
+*.gcode
+
+# Project Specific - Aerodynamic Analysis
+output/VSP/
+*.vsp3
+*.vsp
+vspaero.out
+
+# Logs and Debugging
+logs/
+*.log
+.pytest_cache/
+
+# OS Specific
+.DS_Store
+Thumbs.db
