@@ -13,21 +13,22 @@ The original GU25-5(11)8 caused dangerous pitch-down in rain.
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
-import math
 
 
 class AirfoilType(Enum):
     """Supported airfoil profiles."""
-    RONCZ_R1145MS = "roncz_r1145ms"      # MANDATORY canard airfoil (rain-safe)
-    EPPLER_1230_MOD = "eppler_1230_mod"   # Main wing (with reflex)
-    GU25_5_11_8 = "gu25_5_11_8"           # DEPRECATED - unsafe in rain
+
+    RONCZ_R1145MS = "roncz_r1145ms"  # MANDATORY canard airfoil (rain-safe)
+    EPPLER_1230_MOD = "eppler_1230_mod"  # Main wing (with reflex)
+    GU25_5_11_8 = "gu25_5_11_8"  # DEPRECATED - unsafe in rain
 
 
 class FoamType(Enum):
     """Foam core materials with thermal properties for hot-wire cutting."""
-    STYROFOAM_BLUE = "styrofoam_blue"     # 2 lb/ft³ - Standard wing cores
-    URETHANE_2LB = "urethane_2lb"         # 2 lb/ft³ - Higher temp resistance
-    DIVINYCELL_H45 = "divinycell_h45"     # Structural foam - fuselage
+
+    STYROFOAM_BLUE = "styrofoam_blue"  # 2 lb/ft³ - Standard wing cores
+    URETHANE_2LB = "urethane_2lb"  # 2 lb/ft³ - Higher temp resistance
+    DIVINYCELL_H45 = "divinycell_h45"  # Structural foam - fuselage
 
 
 @dataclass
@@ -67,33 +68,33 @@ class GeometricParams:
     """Primary aircraft geometry - all dimensions in inches unless noted."""
 
     # === MAIN WING (Eppler 1230 Modified) ===
-    wing_span: float = 316.8              # Total span (26.4 ft)
-    wing_root_chord: float = 68.0         # Root chord at BL 23.3
-    wing_tip_chord: float = 32.0          # Tip chord
-    wing_sweep_le: float = 25.0           # Leading edge sweep (degrees)
-    wing_dihedral: float = -4.5           # Negative = anhedral (degrees)
-    wing_washout: float = 1.0             # Tip washout (degrees)
-    wing_incidence: float = 0.0           # Relative to longerons (degrees)
+    wing_span: float = 316.8  # Total span (26.4 ft)
+    wing_root_chord: float = 68.0  # Root chord at BL 23.3
+    wing_tip_chord: float = 32.0  # Tip chord
+    wing_sweep_le: float = 25.0  # Leading edge sweep (degrees)
+    wing_dihedral: float = -4.5  # Negative = anhedral (degrees)
+    wing_washout: float = 1.0  # Tip washout (degrees)
+    wing_incidence: float = 0.0  # Relative to longerons (degrees)
 
     # === CANARD (Roncz R1145MS - SAFETY CRITICAL) ===
-    canard_span: float = 147.0            # Total span (12.25 ft)
-    canard_root_chord: float = 17.0       # Root chord
-    canard_tip_chord: float = 13.5        # Tip chord
-    canard_sweep_le: float = 13.5         # Leading edge sweep (degrees)
-    canard_incidence: float = -1.5        # Relative to longerons (degrees)
+    canard_span: float = 147.0  # Total span (12.25 ft)
+    canard_root_chord: float = 17.0  # Root chord
+    canard_tip_chord: float = 13.5  # Tip chord
+    canard_sweep_le: float = 13.5  # Leading edge sweep (degrees)
+    canard_incidence: float = -1.5  # Relative to longerons (degrees)
 
     # === FUSELAGE STATIONS (FS) ===
-    fs_nose: float = 0.0                  # Nose reference
-    fs_canard_le: float = 36.0            # Canard leading edge
-    fs_pilot_seat: float = 80.0           # F-22 bulkhead (pilot)
-    fs_rear_seat: float = 115.0           # F-28 bulkhead (passenger/baggage)
-    fs_wing_le: float = 133.0             # Wing leading edge at root
-    fs_firewall: float = 180.0            # Engine firewall (F-28)
-    fs_tail: float = 214.0                # Tail cone terminus
+    fs_nose: float = 0.0  # Nose reference
+    fs_canard_le: float = 36.0  # Canard leading edge
+    fs_pilot_seat: float = 80.0  # F-22 bulkhead (pilot)
+    fs_rear_seat: float = 115.0  # F-28 bulkhead (passenger/baggage)
+    fs_wing_le: float = 133.0  # Wing leading edge at root
+    fs_firewall: float = 180.0  # Engine firewall (F-28)
+    fs_tail: float = 214.0  # Tail cone terminus
 
     # === ERGONOMICS ===
-    cockpit_width: float = 23.0           # F-22 interior width
-    pilot_height_max: float = 77.0        # Max pilot height (inches)
+    cockpit_width: float = 23.0  # F-22 interior width
+    pilot_height_max: float = 77.0  # Max pilot height (inches)
 
     # === DERIVED DIMENSIONS (computed at runtime) ===
     @property
@@ -120,7 +121,7 @@ class GeometricParams:
     def wing_aspect_ratio(self) -> float:
         """Wing aspect ratio (span² / area)."""
         span_ft = self.wing_span / 12
-        return (span_ft ** 2) / self.wing_area
+        return (span_ft**2) / self.wing_area
 
 
 @dataclass
@@ -128,17 +129,17 @@ class MaterialParams:
     """Composite layup and foam specifications."""
 
     # === FIBERGLASS PLY THICKNESSES (inches) ===
-    bid_ply_thickness: float = 0.013      # Bi-directional cloth (per ply)
-    uni_ply_thickness: float = 0.009      # Unidirectional tape (per ply)
+    bid_ply_thickness: float = 0.013  # Bi-directional cloth (per ply)
+    uni_ply_thickness: float = 0.009  # Unidirectional tape (per ply)
 
     # === SPAR CAP LAYUP (Long-EZ specific) ===
-    spar_cap_plies: int = 17              # UNI plies for main spar cap
-    spar_cap_width: float = 3.0           # Spar cap width (inches)
+    spar_cap_plies: int = 17  # UNI plies for main spar cap
+    spar_cap_width: float = 3.0  # Spar cap width (inches)
 
     # === FOAM CORE ===
     wing_core_foam: FoamType = FoamType.STYROFOAM_BLUE
     fuselage_foam: FoamType = FoamType.URETHANE_2LB
-    foam_core_thickness: float = 0.5      # PVC foam shell thickness
+    foam_core_thickness: float = 0.5  # PVC foam shell thickness
 
     # === LAMINATE SCHEDULES ===
     laminates: Dict[str, LaminateDefinition] = field(
@@ -184,14 +185,14 @@ class ManufacturingParams:
     """CNC and hot-wire cutting parameters."""
 
     # === HOT-WIRE CUTTING ===
-    wire_diameter: float = 0.032          # NiChrome wire diameter (inches)
-    wire_temp_styrofoam: float = 400      # Cutting temp for Styrofoam (°F)
-    wire_temp_urethane: float = 500       # Cutting temp for urethane (°F)
-    feed_rate_default: float = 4.0        # Default feed rate (in/min)
+    wire_diameter: float = 0.032  # NiChrome wire diameter (inches)
+    wire_temp_styrofoam: float = 400  # Cutting temp for Styrofoam (°F)
+    wire_temp_urethane: float = 500  # Cutting temp for urethane (°F)
+    feed_rate_default: float = 4.0  # Default feed rate (in/min)
 
     # === KERF COMPENSATION ===
-    kerf_styrofoam: float = 0.045         # Material removed (inches)
-    kerf_urethane: float = 0.035          # Material removed (inches)
+    kerf_styrofoam: float = 0.045  # Material removed (inches)
+    kerf_urethane: float = 0.035  # Material removed (inches)
 
     # === NESTING / SHEET STOCK ===
     stock_sheets: List[Tuple[float, float]] = field(
@@ -234,18 +235,20 @@ class ComplianceParams:
     """FAA 14 CFR 21.191(g) compliance tracking."""
 
     # Task credit weights (percentage of 51% rule)
-    task_credits: Dict[str, float] = field(default_factory=lambda: {
-        "wing_cores_cnc": 0.08,           # Builder-operated CNC foam cutting
-        "wing_skins_layup": 0.12,         # Manual fiberglass layup
-        "fuselage_assembly": 0.15,        # Bulkhead installation & bonding
-        "canard_fabrication": 0.10,       # Canard core + skins
-        "control_system": 0.08,           # Linkages, cables, torque tubes
-        "landing_gear": 0.06,             # Main gear bow, nose gear
-        "engine_install": 0.05,           # Engine mount, baffles, cowl
-        "electrical": 0.04,               # Wiring harness
-        "finishing": 0.06,                # Fill, sand, paint
-        "final_assembly": 0.10,           # Systems integration
-    })
+    task_credits: Dict[str, float] = field(
+        default_factory=lambda: {
+            "wing_cores_cnc": 0.08,  # Builder-operated CNC foam cutting
+            "wing_skins_layup": 0.12,  # Manual fiberglass layup
+            "fuselage_assembly": 0.15,  # Bulkhead installation & bonding
+            "canard_fabrication": 0.10,  # Canard core + skins
+            "control_system": 0.08,  # Linkages, cables, torque tubes
+            "landing_gear": 0.06,  # Main gear bow, nose gear
+            "engine_install": 0.05,  # Engine mount, baffles, cowl
+            "electrical": 0.04,  # Wiring harness
+            "finishing": 0.06,  # Fill, sand, paint
+            "final_assembly": 0.10,  # Systems integration
+        }
+    )
 
     @property
     def total_builder_credit(self) -> float:
@@ -297,7 +300,7 @@ class AircraftConfig:
         # STABILITY CHECK: Canard must stall before wing
         # (simplified check - full analysis requires OpenVSP)
         canard_loading = 1.0  # placeholder
-        wing_loading = 1.0    # placeholder
+        wing_loading = 1.0  # placeholder
         if canard_loading < wing_loading:
             errors.append(
                 "STABILITY WARNING: Canard loading may not ensure canard-first stall. "
@@ -337,7 +340,7 @@ Spar Trough Depth: {self.materials.spar_trough_depth:.3f} in
 COMPLIANCE
 ----------
 Builder Credits: {self.compliance.total_builder_credit:.1%}
-FAA 51% Status: {'PASS' if self.compliance.total_builder_credit >= 0.51 else 'FAIL'}
+FAA 51% Status: {"PASS" if self.compliance.total_builder_credit >= 0.51 else "FAIL"}
 """
 
 
@@ -348,5 +351,6 @@ config = AircraftConfig()
 _errors = config.validate()
 if _errors:
     import warnings
+
     for err in _errors:
         warnings.warn(err, UserWarning)

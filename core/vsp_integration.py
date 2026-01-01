@@ -8,17 +8,18 @@ Provides parametric geometry mapping and analysis execution.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, Optional, Union, Tuple
 import json
 
 from config import config
 
 logger = logging.getLogger(__name__)
 
+
 class VSPIntegration:
     """
     Main bridge for OpenVSP interactions.
-    
+
     Handles:
     - Native OpenVSP API detection and initialization
     - Mapping PDE config to VSP parameters
@@ -35,12 +36,15 @@ class VSPIntegration:
         """Attempt to load the OpenVSP Python API."""
         try:
             import openvsp as vsp
+
             logger.info("OpenVSP Python API detected successfully.")
             # VSP requires initialization
             vsp.VSPCheckIsInit()
             return vsp
         except ImportError:
-            logger.warning("OpenVSP Python API not found. Integration will run in 'Headless/Surrogate' mode.")
+            logger.warning(
+                "OpenVSP Python API not found. Integration will run in 'Headless/Surrogate' mode."
+            )
             return None
         except Exception as e:
             logger.error(f"Error initializing OpenVSP: {e}")
@@ -72,7 +76,7 @@ class VSPIntegration:
                     "washout": geo.wing_washout,
                     "incidence": geo.wing_incidence,
                     "root_airfoil": airfoils.wing_root.value,
-                    "reflex_pct": airfoils.wing_reflex_percent
+                    "reflex_pct": airfoils.wing_reflex_percent,
                 },
                 "canard": {
                     "span": geo.canard_span,
@@ -80,21 +84,23 @@ class VSPIntegration:
                     "tip_chord": geo.canard_tip_chord,
                     "sweep": geo.canard_sweep_le,
                     "incidence": geo.canard_incidence,
-                    "airfoil": airfoils.canard.value
-                }
-            }
+                    "airfoil": airfoils.canard.value,
+                },
+            },
         }
 
         output_path = self.output_dir / "pde_vsp_metadata.json"
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
-        
+
         return output_path
 
-    def run_aerodynamic_sweep(self, alpha_range: Tuple[float, float, int] = (-4, 12, 5)) -> Dict[str, Any]:
+    def run_aerodynamic_sweep(
+        self, alpha_range: Tuple[float, float, int] = (-4, 12, 5)
+    ) -> Dict[str, Any]:
         """
         Execute an AoA sweep using VSPAERO or surrogate.
-        
+
         Returns:
             Dictionary containing lift, drag, and moment coefficients.
         """
@@ -103,7 +109,9 @@ class VSPIntegration:
         else:
             return self._run_surrogate_sweep(alpha_range)
 
-    def _run_native_sweep(self, alpha_range: Tuple[float, float, int]) -> Dict[str, Any]:
+    def _run_native_sweep(
+        self, alpha_range: Tuple[float, float, int]
+    ) -> Dict[str, Any]:
         """Drive the real OpenVSP/VSPAERO solver."""
         # This would involve:
         # 1. Clearing VSP world
@@ -114,28 +122,39 @@ class VSPIntegration:
         # Placeholder for real VSP API calls
         return {"mode": "native", "results": "FIXME: Implement native VSP calls"}
 
-    def _run_surrogate_sweep(self, alpha_range: Tuple[float, float, int]) -> Dict[str, Any]:
+    def _run_surrogate_sweep(
+        self, alpha_range: Tuple[float, float, int]
+    ) -> Dict[str, Any]:
         """Fall back to the PhysicsEngine surrogate results."""
         from .analysis import physics
-        
-        alphas = list(range(int(alpha_range[0]), int(alpha_range[1]) + 1, int((alpha_range[1]-alpha_range[0])/max(1, alpha_range[2]-1))))
-        
+
+        alphas = list(
+            range(
+                int(alpha_range[0]),
+                int(alpha_range[1]) + 1,
+                int((alpha_range[1] - alpha_range[0]) / max(1, alpha_range[2] - 1)),
+            )
+        )
+
         # Capture metrics for multiple points (simplified)
         sweep_data = []
         for a in alphas:
             # We use the physics engine's summary/metrics which are tuned for Long-EZ
             # Note: real implementation would iterate physics.calculate_cl_cd(a)
-            sweep_data.append({
-                "alpha": a,
-                "cl": 0.1 * a, # mockup
-                "cm": -0.02 # mockup
-            })
-            
+            sweep_data.append(
+                {
+                    "alpha": a,
+                    "cl": 0.1 * a,  # mockup
+                    "cm": -0.02,  # mockup
+                }
+            )
+
         return {
             "mode": "surrogate",
             "sweep": sweep_data,
-            "is_stable": physics.calculate_cg_envelope().is_stable
+            "is_stable": physics.calculate_cg_envelope().is_stable,
         }
+
 
 # Singleton instance
 vsp_bridge = VSPIntegration()

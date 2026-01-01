@@ -108,10 +108,7 @@ class AircraftComponent(ABC):
         output_path.mkdir(parents=True, exist_ok=True)
         stl_file = output_path / f"{self.name}.stl"
         cq.exporters.export(
-            self._geometry,
-            str(stl_file),
-            exportType="STL",
-            tolerance=tolerance
+            self._geometry, str(stl_file), exportType="STL", tolerance=tolerance
         )
         self._write_artifact_metadata(stl_file, artifact_type="STL")
         return stl_file
@@ -132,11 +129,7 @@ class AircraftComponent(ABC):
 
     def get_metadata(self) -> Dict[str, Any]:
         """Retrieve all metadata for this component."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            **self._metadata
-        }
+        return {"name": self.name, "description": self.description, **self._metadata}
 
     def __repr__(self) -> str:
         status = "generated" if self._geometry else "not generated"
@@ -169,10 +162,7 @@ class FoamCore(AircraftComponent):
         pass
 
     def export_gcode(
-        self,
-        output_path: Path,
-        kerf_offset: float = 0.045,
-        feed_rate: float = 4.0
+        self, output_path: Path, kerf_offset: float = 0.045, feed_rate: float = 4.0
     ) -> Path:
         """
         Generate 4-axis hot-wire G-code for CNC foam cutting.
@@ -192,7 +182,7 @@ class FoamCore(AircraftComponent):
             root_profile=self.get_root_profile(),
             tip_profile=self.get_tip_profile(),
             kerf_offset=kerf_offset,
-            feed_rate=feed_rate
+            feed_rate=feed_rate,
         )
         output_path.mkdir(parents=True, exist_ok=True)
         gcode_path = writer.write(output_path / f"{self.name}.tap")
@@ -208,12 +198,7 @@ class Bulkhead(AircraftComponent):
     Primary output is DXF for laser cutting.
     """
 
-    def __init__(
-        self,
-        name: str,
-        station: float,
-        description: str = ""
-    ):
+    def __init__(self, name: str, station: float, description: str = ""):
         """
         Initialize a bulkhead at a fuselage station.
 

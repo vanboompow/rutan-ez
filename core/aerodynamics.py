@@ -10,7 +10,7 @@ SAFETY: Defaults to Roncz R1145MS for canard applications.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Tuple, Optional
 import numpy as np
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
@@ -22,6 +22,7 @@ from config import config, AirfoilType
 @dataclass
 class AirfoilCoordinates:
     """Raw airfoil coordinate data."""
+
     name: str
     x_upper: np.ndarray
     y_upper: np.ndarray
@@ -53,10 +54,7 @@ class Airfoil:
     """
 
     def __init__(
-        self,
-        coords: AirfoilCoordinates,
-        n_points: int = 200,
-        smooth: bool = True
+        self, coords: AirfoilCoordinates, n_points: int = 200, smooth: bool = True
     ):
         """
         Initialize airfoil from raw coordinates.
@@ -77,10 +75,7 @@ class Airfoil:
         self._close_trailing_edge()
 
     def _process_coordinates(
-        self,
-        coords: AirfoilCoordinates,
-        n_points: int,
-        smooth: bool
+        self, coords: AirfoilCoordinates, n_points: int, smooth: bool
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Apply spline interpolation and optional smoothing."""
 
@@ -148,10 +143,10 @@ class Airfoil:
         # Create new instance with rotated coordinates
         new_coords = AirfoilCoordinates(
             name=f"{self.name}_washout_{angle_deg}deg",
-            x_upper=x_rot[:len(x_rot)//2],
-            y_upper=y_rot[:len(y_rot)//2],
-            x_lower=x_rot[len(x_rot)//2:][::-1],
-            y_lower=y_rot[len(y_rot)//2:][::-1]
+            x_upper=x_rot[: len(x_rot) // 2],
+            y_upper=y_rot[: len(y_rot) // 2],
+            x_lower=x_rot[len(x_rot) // 2 :][::-1],
+            y_lower=y_rot[len(y_rot) // 2 :][::-1],
         )
         return Airfoil(new_coords, self._n_points, smooth=False)
 
@@ -180,10 +175,10 @@ class Airfoil:
 
         new_coords = AirfoilCoordinates(
             name=f"{self.name}_reflex_{percent}pct",
-            x_upper=x_new[:len(x_new)//2],
-            y_upper=y_new[:len(y_new)//2],
-            x_lower=x_new[len(x_new)//2:][::-1],
-            y_lower=y_new[len(y_new)//2:][::-1]
+            x_upper=x_new[: len(x_new) // 2],
+            y_upper=y_new[: len(y_new) // 2],
+            x_lower=x_new[len(x_new) // 2 :][::-1],
+            y_lower=y_new[len(y_new) // 2 :][::-1],
         )
         return Airfoil(new_coords, self._n_points, smooth=False)
 
@@ -263,10 +258,7 @@ class AirfoilFactory:
         self._cache: dict = {}
 
     def load(
-        self,
-        airfoil_type: AirfoilType,
-        n_points: int = 200,
-        smooth: bool = True
+        self, airfoil_type: AirfoilType, n_points: int = 200, smooth: bool = True
     ) -> Airfoil:
         """
         Load an airfoil by type.
@@ -299,10 +291,7 @@ class AirfoilFactory:
         return airfoil
 
     def load_from_file(
-        self,
-        filepath: Path,
-        n_points: int = 200,
-        smooth: bool = True
+        self, filepath: Path, n_points: int = 200, smooth: bool = True
     ) -> Airfoil:
         """
         Load an airfoil from arbitrary .dat file.
@@ -361,8 +350,8 @@ class AirfoilFactory:
         # For now, assume Selig format (most common)
         le_idx = np.argmin(x_all)
 
-        x_upper = x_all[:le_idx + 1][::-1]  # Reverse to go from LE to TE
-        y_upper = y_all[:le_idx + 1][::-1]
+        x_upper = x_all[: le_idx + 1][::-1]  # Reverse to go from LE to TE
+        y_upper = y_all[: le_idx + 1][::-1]
         x_lower = x_all[le_idx:]
         y_lower = y_all[le_idx:]
 
@@ -371,7 +360,7 @@ class AirfoilFactory:
             x_upper=x_upper,
             y_upper=y_upper,
             x_lower=x_lower,
-            y_lower=y_lower
+            y_lower=y_lower,
         )
 
     def get_canard_airfoil(self) -> Airfoil:
@@ -383,10 +372,11 @@ class AirfoilFactory:
         # Verify config hasn't been tampered with
         if config.airfoils.canard != AirfoilType.RONCZ_R1145MS:
             import warnings
+
             warnings.warn(
                 "SAFETY: Overriding canard airfoil to Roncz R1145MS. "
                 "GU25-5(11)8 is unsafe in rain.",
-                UserWarning
+                UserWarning,
             )
 
         return self.load(AirfoilType.RONCZ_R1145MS)

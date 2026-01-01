@@ -82,7 +82,7 @@ class OpenVSPAdapter:
         return -0.012 - 0.0015 * reflex
 
     def _drag_offset(self) -> float:
-        wetted_area_ft2 = (config.geometry.wing_area + config.geometry.canard_area)
+        wetted_area_ft2 = config.geometry.wing_area + config.geometry.canard_area
         return 0.016 + 1e-4 * wetted_area_ft2
 
     def run_vspaero(self, alphas: Sequence[float] | None = None) -> List[AeroPolar]:
@@ -97,7 +97,7 @@ class OpenVSPAdapter:
         for alpha in alphas:
             cl = cl_slope * alpha
             cm = cm0 - 0.0008 * alpha
-            cd = cd0 + 0.01 * (cl ** 2) + 0.0004 * abs(alpha)
+            cd = cd0 + 0.01 * (cl**2) + 0.0004 * abs(alpha)
             results.append(AeroPolar(alpha_deg=alpha, cl=cl, cm=cm, cd=cd))
         return results
 
@@ -114,7 +114,9 @@ class OpenVSPAdapter:
             return 0.0
         return (cl1 - cl0) / (alpha1 - alpha0)
 
-    def serialize_polars(self, alphas: Sequence[float] | None = None, target: Path | None = None) -> Path:
+    def serialize_polars(
+        self, alphas: Sequence[float] | None = None, target: Path | None = None
+    ) -> Path:
         """Write polar data to JSON for downstream reporting."""
 
         polars = [p.__dict__ for p in self.run_vspaero(alphas)]

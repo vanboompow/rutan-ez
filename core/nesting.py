@@ -60,7 +60,9 @@ class NestingPlanner:
         self.dogbone_radius = dogbone_radius
         self.fillet_radius = fillet_radius
 
-    def load_outlines(self, directory: Path, laminate: Optional[str] = None) -> List[Outline]:
+    def load_outlines(
+        self, directory: Path, laminate: Optional[str] = None
+    ) -> List[Outline]:
         """Load DXF outlines from a directory and compute extents."""
 
         outlines: List[Outline] = []
@@ -94,7 +96,9 @@ class NestingPlanner:
         cursor_y = self.margin
         row_height = 0.0
 
-        for outline in sorted(outlines, key=lambda o: max(o.width, o.height), reverse=True):
+        for outline in sorted(
+            outlines, key=lambda o: max(o.width, o.height), reverse=True
+        ):
             for _ in range(outline.quantity):
                 # Move to next row if needed
                 if cursor_x + outline.width + self.margin > sheet_w:
@@ -106,7 +110,9 @@ class NestingPlanner:
                 if cursor_y + outline.height + self.margin > sheet_h:
                     sheet_index += 1
                     if sheet_index >= len(self.stock_sheets):
-                        raise ValueError("Not enough stock sheets to place all outlines")
+                        raise ValueError(
+                            "Not enough stock sheets to place all outlines"
+                        )
                     sheet_w, sheet_h = self.stock_sheets[sheet_index]
                     cursor_x = self.margin
                     cursor_y = self.margin
@@ -124,13 +130,17 @@ class NestingPlanner:
 
         return placements
 
-    def _copy_entities(self, source_doc: ezdxf.document.Drawing, target_msp, dx: float, dy: float) -> None:
+    def _copy_entities(
+        self, source_doc: ezdxf.document.Drawing, target_msp, dx: float, dy: float
+    ) -> None:
         for entity in source_doc.modelspace():
             copied = entity.copy()
             copied.translate(dx, dy, 0)
             target_msp.add_entity(copied)
 
-    def _add_corner_relief(self, msp, placement: Placement, radius: float, layer: str) -> None:
+    def _add_corner_relief(
+        self, msp, placement: Placement, radius: float, layer: str
+    ) -> None:
         if radius <= 0:
             return
         x0, y0 = placement.origin
@@ -150,7 +160,9 @@ class NestingPlanner:
             placement.outline.name,
             dxfattribs={"layer": "ENGRAVE_LABELS"},
         ).set_pos((cx, cy), align="MIDDLE_CENTER")
-        msp.add_line((cx, cy), (cx, cy - engraving_depth), dxfattribs={"layer": "ENGRAVE_LABELS"})
+        msp.add_line(
+            (cx, cy), (cx, cy - engraving_depth), dxfattribs={"layer": "ENGRAVE_LABELS"}
+        )
 
     def export(
         self,
@@ -162,9 +174,7 @@ class NestingPlanner:
         """Export nested DXFs by sheet and a CSV manifest."""
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        manifest_rows: List[str] = [
-            "sheet,part,x,y,width,height,laminate,cut_order"
-        ]
+        manifest_rows: List[str] = ["sheet,part,x,y,width,height,laminate,cut_order"]
 
         grouped: Dict[int, List[Placement]] = {}
         for placement in placements:
@@ -192,7 +202,11 @@ class NestingPlanner:
                 self._add_corner_relief(msp, placement, self.fillet_radius, "FILLET")
                 self._add_label(msp, placement, engraving_depth)
 
-                cut_steps = laminate_cut_orders.get(placement.outline.laminate) if laminate_cut_orders else None
+                cut_steps = (
+                    laminate_cut_orders.get(placement.outline.laminate)
+                    if laminate_cut_orders
+                    else None
+                )
                 cut_order = " > ".join(cut_steps or ["ENGRAVE", "PROFILE"])
 
                 manifest_rows.append(

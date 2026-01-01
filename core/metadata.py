@@ -3,6 +3,7 @@ Metadata utilities for Open-EZ PDE artifacts.
 
 Standardizes provenance data stored alongside STEP/STL/G-code outputs.
 """
+
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import hashlib

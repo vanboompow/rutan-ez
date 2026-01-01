@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict
 
 from config import config
@@ -20,7 +19,7 @@ class BeamSection:
     @property
     def inertia(self) -> float:
         """Area moment of inertia about the neutral axis (in^4)."""
-        return (self.width_in * (self.height_in ** 3)) / 12
+        return (self.width_in * (self.height_in**3)) / 12
 
 
 @dataclass
@@ -35,7 +34,9 @@ class BeamFEAAdapter:
     """Euler-Bernoulli beam estimator for rapid spar checks."""
 
     def __init__(self, section: BeamSection | None = None):
-        spar_height = config.materials.spar_cap_plies * config.materials.uni_ply_thickness
+        spar_height = (
+            config.materials.spar_cap_plies * config.materials.uni_ply_thickness
+        )
         section = section or BeamSection(
             width_in=config.materials.spar_cap_width,
             height_in=spar_height,
@@ -46,12 +47,12 @@ class BeamFEAAdapter:
     def analyze_cantilever(self, span_in: float, tip_load_lbf: float) -> BeamResult:
         """Compute tip deflection and max stress for a point load at the tip."""
 
-        L = span_in
-        E = self.section.modulus_psi
-        I = self.section.inertia
+        length = span_in
+        modulus = self.section.modulus_psi
+        inertia = self.section.inertia
 
-        tip_deflection = (tip_load_lbf * (L ** 3)) / (3 * E * I)
-        max_stress = (tip_load_lbf * L * (self.section.height_in / 2)) / I
+        tip_deflection = (tip_load_lbf * (length**3)) / (3 * modulus * inertia)
+        max_stress = (tip_load_lbf * length * (self.section.height_in / 2)) / inertia
         return BeamResult(tip_deflection_in=tip_deflection, max_stress_psi=max_stress)
 
     def nominal_spar_check(self) -> Dict[str, float]:
@@ -71,10 +72,14 @@ class BeamFEAAdapter:
         modulus = 1.5e6  # plywood modulus (psi)
         width = 24.0
         height = plate_thickness_in
-        plate_section = BeamSection(width_in=width, height_in=height, modulus_psi=modulus)
+        plate_section = BeamSection(
+            width_in=width, height_in=height, modulus_psi=modulus
+        )
         half_span = 36.0
         load = 50.0
-        result = BeamFEAAdapter(section=plate_section).analyze_cantilever(span_in=half_span, tip_load_lbf=load)
+        result = BeamFEAAdapter(section=plate_section).analyze_cantilever(
+            span_in=half_span, tip_load_lbf=load
+        )
         return {
             "tip_deflection_in": result.tip_deflection_in,
             "max_stress_psi": result.max_stress_psi,

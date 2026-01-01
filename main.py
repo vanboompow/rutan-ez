@@ -17,10 +17,10 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from config import config
-from core.structures import CanardGenerator, WingGenerator, Fuselage
-from core.analysis import physics, VSPBridge
-from core.manufacturing import JigFactory
+from config import config  # noqa: E402
+from core.structures import CanardGenerator, WingGenerator  # noqa: E402
+from core.analysis import physics, VSPBridge  # noqa: E402
+from core.manufacturing import JigFactory  # noqa: E402
 
 
 def validate_config() -> bool:
@@ -58,7 +58,7 @@ def validate_physics() -> bool:
         for failure in failures:
             print(f"   - {failure}")
 
-    polars_path = (project_root / "output" / "reports" / "vspaero_polars.json")
+    polars_path = project_root / "output" / "reports" / "vspaero_polars.json"
     runner.aero.serialize_polars(target=polars_path)
     return passed
 
@@ -81,7 +81,7 @@ def run_analysis():
     vsp_dir = project_root / "output" / "VSP"
     vsp_dir.mkdir(parents=True, exist_ok=True)
     VSPBridge.export_vsp_script(vsp_dir / "model.vspscript")
-    print(f"  OpenVSP script exported to output/VSP/")
+    print("  OpenVSP script exported to output/VSP/")
 
 
 def generate_manufacturing():
@@ -123,7 +123,7 @@ def generate_canard() -> None:
         canard.export_step(step_dir)
         canard.export_stl(stl_dir)
         canard.export_dxf(dxf_dir)
-        print(f"  Canard core exported to output/")
+        print("  Canard core exported to output/")
     except Exception as e:
         print(f"  Error generating canard: {e}")
 
@@ -146,7 +146,7 @@ def generate_wing() -> None:
         sweep_angle=config.geometry.wing_sweep_le,
         dihedral_angle=config.geometry.wing_dihedral,
         washout=config.geometry.wing_washout,
-        description="Long-EZ main wing with Eppler 1230 modified"
+        description="Long-EZ main wing with Eppler 1230 modified",
     )
 
     step_dir = project_root / "output" / "STEP"
@@ -156,7 +156,7 @@ def generate_wing() -> None:
         wing.generate_geometry()
         wing.cut_spar_trough()
         wing.export_step(step_dir)
-        print(f"  Main wing exported to output/STEP/")
+        print("  Main wing exported to output/STEP/")
     except Exception as e:
         print(f"  Error generating wing: {e}")
 
@@ -228,16 +228,30 @@ def nest_sheets() -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Open-EZ PDE Environment")
-    parser.add_argument("--generate-all", action="store_true", help="Generate CAD, CNC, and Docs")
+    parser.add_argument(
+        "--generate-all", action="store_true", help="Generate CAD, CNC, and Docs"
+    )
     parser.add_argument("--analysis", action="store_true", help="Run physics analysis")
     parser.add_argument("--jigs", action="store_true", help="Generate 3D printing jigs")
     parser.add_argument("--canard", action="store_true", help="Generate canard only")
     parser.add_argument("--wing", action="store_true", help="Generate main wing only")
-    parser.add_argument("--validate", action="store_true", help="Validate configuration only")
-    parser.add_argument("--validate-physics", action="store_true", help="Validate aerodynamic/structural regressions")
-    parser.add_argument("--compliance", action="store_true", help="Generate FAA compliance report")
-    parser.add_argument("--nest-sheets", action="store_true", help="Nest DXF outlines onto stock sheets")
-    parser.add_argument("--summary", action="store_true", help="Show configuration summary")
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate configuration only"
+    )
+    parser.add_argument(
+        "--validate-physics",
+        action="store_true",
+        help="Validate aerodynamic/structural regressions",
+    )
+    parser.add_argument(
+        "--compliance", action="store_true", help="Generate FAA compliance report"
+    )
+    parser.add_argument(
+        "--nest-sheets", action="store_true", help="Nest DXF outlines onto stock sheets"
+    )
+    parser.add_argument(
+        "--summary", action="store_true", help="Show configuration summary"
+    )
 
     args = parser.parse_args()
 

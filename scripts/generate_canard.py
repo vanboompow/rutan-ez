@@ -23,9 +23,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from config import config
-from core.aerodynamics import AirfoilFactory
-from core.structures import CanardGenerator
+from config import config  # noqa: E402
+from core.structures import CanardGenerator  # noqa: E402
 
 
 def main():
@@ -68,7 +67,7 @@ def main():
     # Generate geometry
     print("\n[2/4] Generating Lofted Geometry...")
     try:
-        geometry = canard.generate_geometry()
+        canard.generate_geometry()
         print("      Loft successful.")
     except Exception as e:
         print(f"      ERROR: Geometry generation failed: {e}")

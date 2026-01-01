@@ -5,7 +5,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from core.simulation.regression import RegressionRunner
+from core.simulation.regression import RegressionRunner  # noqa: E402
 
 
 def test_physics_regressions_match_baseline(tmp_path):

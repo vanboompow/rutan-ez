@@ -5,10 +5,18 @@ from .structures import WingGenerator, CanardGenerator, Fuselage
 from .compliance import ComplianceTracker
 from .manufacturing import GCodeWriter, JigFactory, GCodeConfig, CutPath
 from .analysis import (
-    PhysicsEngine, VSPBridge, StabilityMetrics,
-    WeightBalance, WeightItem, physics,
-    OpenVSPRunner, AerodynamicPoint, TrimSweepResult,
-    CLMaxResult, StructuralMeshManifest, openvsp_runner
+    PhysicsEngine,
+    VSPBridge,
+    StabilityMetrics,
+    WeightBalance,
+    WeightItem,
+    physics,
+    OpenVSPRunner,
+    AerodynamicPoint,
+    TrimSweepResult,
+    CLMaxResult,
+    StructuralMeshManifest,
+    openvsp_runner,
 )
 
 __all__ = [
