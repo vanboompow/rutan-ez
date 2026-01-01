@@ -94,7 +94,10 @@ class AircraftAssembly(AircraftComponent):
         """Export master layout DXF."""
         output_path.mkdir(parents=True, exist_ok=True)
         # Top view projection
-        top_view = self.geometry.projectToViewport((0, 0, 1))
+        geom = self.geometry
+        if geom is None:
+            raise ValueError("Geometry not generated")
+        top_view = geom.projectToViewport((0, 0, 1))
         dxf_file = output_path / f"{self.name}_top_layout.dxf"
 
         cq.exporters.export(top_view, str(dxf_file))
@@ -104,6 +107,9 @@ class AircraftAssembly(AircraftComponent):
         """Calculate total volume and estimated weight."""
         if self._geometry is None:
             self.generate_geometry()
+
+        if self._geometry is None:
+            raise ValueError("Geometry not generated")
 
         # Volume in cubic inches
         total_volume = self._geometry.val().Volume()

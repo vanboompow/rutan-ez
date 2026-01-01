@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import List, Sequence
 
 from config import config
 
@@ -101,7 +101,7 @@ class OpenVSPAdapter:
             results.append(AeroPolar(alpha_deg=alpha, cl=cl, cm=cm, cd=cd))
         return results
 
-    def lift_curve_slope(self, alphas: Iterable[float] | None = None) -> float:
+    def lift_curve_slope(self, alphas: Sequence[float] | None = None) -> float:
         """Compute dCL/dalpha from generated polars."""
 
         polars = self.run_vspaero(alphas)
