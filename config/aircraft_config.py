@@ -90,6 +90,31 @@ class GeometricParams:
         span_ft = self.wing_span / 12
         return (span_ft ** 2) / self.wing_area
 
+    @property
+    def wing_semi_span(self) -> float:
+        """Half-span for a single wing panel (inches)."""
+        return self.wing_span / 2
+
+    @property
+    def wing_taper_ratio(self) -> float:
+        """Chord taper ratio (tip/root)."""
+        return self.wing_tip_chord / self.wing_root_chord
+
+    @property
+    def wing_tip_le_offset(self) -> float:
+        """Leading-edge sweep offset at the tip (inches)."""
+        return self.wing_semi_span * math.tan(math.radians(self.wing_sweep_le))
+
+    @property
+    def wing_tip_dihedral_rise(self) -> float:
+        """Vertical rise at the tip due to dihedral/anhedral (inches)."""
+        return self.wing_semi_span * math.tan(math.radians(self.wing_dihedral))
+
+    @property
+    def canard_semi_span(self) -> float:
+        """Half-span for the canard (inches)."""
+        return self.canard_span / 2
+
 
 @dataclass
 class MaterialParams:
@@ -108,10 +133,28 @@ class MaterialParams:
     fuselage_foam: FoamType = FoamType.URETHANE_2LB
     foam_core_thickness: float = 0.5      # PVC foam shell thickness
 
+    # === RESINS & FABRICS ===
+    primary_resin: str = "MGS-285 epoxy"
+    skin_fabric: str = "BID E-glass"
+    peel_ply: str = "Dacron release fabric"
+
     @property
     def spar_trough_depth(self) -> float:
         """Spar cap trough depth = plies × thickness."""
         return self.spar_cap_plies * self.uni_ply_thickness
+
+    @property
+    def foam_densities_lbft3(self) -> Dict[FoamType, float]:
+        """Density lookup for each supported foam type (lb/ft³)."""
+        return {
+            FoamType.STYROFOAM_BLUE: 2.0,
+            FoamType.URETHANE_2LB: 2.0,
+            FoamType.DIVINYCELL_H45: 3.0,
+        }
+
+    def foam_density(self, foam: FoamType) -> float:
+        """Get density for a given foam type (lb/ft³)."""
+        return self.foam_densities_lbft3.get(foam, 0.0)
 
 
 @dataclass
@@ -243,6 +286,8 @@ GEOMETRY
 Wing Span: {self.geometry.wing_span / 12:.1f} ft
 Wing Area: {self.geometry.wing_area:.1f} sq ft
 Wing AR: {self.geometry.wing_aspect_ratio:.2f}
+Wing Semi-Span: {self.geometry.wing_semi_span:.1f} in
+Wing Taper Ratio: {self.geometry.wing_taper_ratio:.3f}
 Canard Span: {self.geometry.canard_span / 12:.1f} ft
 Canard Area: {self.geometry.canard_area:.1f} sq ft
 Canard Arm: {self.geometry.canard_arm:.1f} in
@@ -257,6 +302,8 @@ MATERIALS
 ---------
 Spar Cap Plies: {self.materials.spar_cap_plies}
 Spar Trough Depth: {self.materials.spar_trough_depth:.3f} in
+Wing Core Foam: {self.materials.wing_core_foam.value} ({self.materials.foam_density(self.materials.wing_core_foam)} lb/ft³)
+Primary Resin: {self.materials.primary_resin}
 
 COMPLIANCE
 ----------
