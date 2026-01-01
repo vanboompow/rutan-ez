@@ -1,6 +1,10 @@
 """
-Open-EZ PDE: Structural Components
-==================================
+Open-EZ PDE: Structural Components (Updated)
+============================================
+
+Includes support for:
+- Manufacturing Segmentation (splitting wings for foam blocks)
+- Jig Generation Hooks
 
 WingGenerator: Lofted wing/canard cores with sweep, dihedral, washout.
 Fuselage: Station-based profile lofting with bulkhead integration.
@@ -17,6 +21,7 @@ import cadquery as cq
 from config import config
 from .base import AircraftComponent, FoamCore
 from .aerodynamics import Airfoil, AirfoilFactory, airfoil_factory
+from .manufacturing import JigFactory  # NEW Import
 
 
 @dataclass
@@ -232,26 +237,166 @@ class WingGenerator(FoamCore):
 
     def export_dxf(self, output_path: Path) -> Path:
         """Export root and tip templates as DXF."""
-        dxf_file = output_path / f"{self.name}_templates.dxf"
-
         # Export root profile
         root_wire = self.get_root_profile()
-        # CadQuery DXF export
+        root_path = output_path / f"{self.name}_root.dxf"
         cq.exporters.export(
             cq.Workplane("XY").add(root_wire),
-            str(output_path / f"{self.name}_root.dxf"),
+            str(root_path),
             exportType="DXF"
         )
+        self._write_artifact_metadata(root_path, artifact_type="DXF")
 
         # Export tip profile
         tip_wire = self.get_tip_profile()
+        tip_path = output_path / f"{self.name}_tip.dxf"
         cq.exporters.export(
             cq.Workplane("XY").add(tip_wire),
-            str(output_path / f"{self.name}_tip.dxf"),
+            str(tip_path),
             exportType="DXF"
         )
+        self._write_artifact_metadata(tip_path, artifact_type="DXF")
 
-        return dxf_file
+        return output_path / f"{self.name}_templates.dxf"
+
+    # === NEW: Manufacturing Methods ===
+
+    def generate_segments(self, max_block_length: float = 48.0) -> List['WingGenerator']:
+        """
+        Split the wing into manufacturable segments for CNC foam cutting.
+
+        Most hot-wire CNC machines have a maximum cutting width of 4 feet (48").
+        This method subdivides the wing into segments that fit within the machine
+        constraints while maintaining structural joint locations.
+
+        Args:
+            max_block_length: Maximum segment length in inches (default: 48" = 4ft)
+
+        Returns:
+            List of WingGenerator objects, each representing a manufacturable segment.
+            Segments are ordered from root to tip.
+        """
+        semi_span = self.span / 2
+        segments = []
+
+        # Calculate number of segments needed
+        num_segments = int(np.ceil(semi_span / max_block_length))
+
+        if num_segments <= 1:
+            # Wing fits in a single block - return self as only segment
+            return [self]
+
+        # Calculate segment boundaries
+        segment_length = semi_span / num_segments
+
+        for seg_idx in range(num_segments):
+            # Spanwise positions for this segment
+            bl_inboard = seg_idx * segment_length
+            bl_outboard = (seg_idx + 1) * segment_length
+
+            # Calculate chord at segment boundaries (linear taper)
+            eta_inboard = bl_inboard / semi_span
+            eta_outboard = bl_outboard / semi_span
+
+            chord_inboard = self.root_chord + eta_inboard * (self.tip_chord - self.root_chord)
+            chord_outboard = self.root_chord + eta_outboard * (self.tip_chord - self.root_chord)
+
+            # Calculate x-offset (sweep) at segment root
+            x_offset_inboard = bl_inboard * np.tan(np.radians(self.sweep_angle))
+
+            # Calculate z-offset (dihedral) at segment root
+            z_offset_inboard = bl_inboard * np.tan(np.radians(self.dihedral_angle))
+
+            # Calculate washout at segment boundaries
+            washout_inboard = eta_inboard * self.washout
+            washout_outboard = eta_outboard * self.washout
+
+            # Interpolate airfoils for this segment
+            if eta_inboard < 0.5:
+                inboard_airfoil = self.root_airfoil
+            else:
+                inboard_airfoil = self.tip_airfoil
+
+            if eta_outboard < 0.5:
+                outboard_airfoil = self.root_airfoil
+            else:
+                outboard_airfoil = self.tip_airfoil
+
+            # Apply washout to segment airfoils
+            if abs(washout_inboard) > 0.001:
+                inboard_airfoil = inboard_airfoil.apply_washout(washout_inboard)
+            if abs(washout_outboard) > 0.001:
+                outboard_airfoil = outboard_airfoil.apply_washout(washout_outboard)
+
+            # Create segment generator
+            segment = WingGenerator(
+                name=f"{self.name}_seg{seg_idx + 1}",
+                root_airfoil=inboard_airfoil,
+                tip_airfoil=outboard_airfoil,
+                span=segment_length * 2,  # WingGenerator expects full span
+                root_chord=chord_inboard,
+                tip_chord=chord_outboard,
+                sweep_angle=self.sweep_angle,
+                dihedral_angle=self.dihedral_angle,
+                washout=washout_outboard - washout_inboard,  # Relative washout
+                n_stations=max(3, self.n_stations // num_segments),
+                description=f"{self.description} - Segment {seg_idx + 1} of {num_segments}"
+            )
+
+            # Store segment metadata
+            segment.add_metadata("segment_index", seg_idx)
+            segment.add_metadata("segment_count", num_segments)
+            segment.add_metadata("bl_inboard", bl_inboard)
+            segment.add_metadata("bl_outboard", bl_outboard)
+            segment.add_metadata("x_offset", x_offset_inboard)
+            segment.add_metadata("z_offset", z_offset_inboard)
+
+            segments.append(segment)
+
+        return segments
+
+    def export_segments_gcode(self, output_dir: Path, max_block_length: float = 48.0) -> List[Path]:
+        """
+        Generate G-code for all wing segments.
+
+        Args:
+            output_dir: Directory for G-code output
+            max_block_length: Maximum segment length in inches
+
+        Returns:
+            List of paths to generated G-code files
+        """
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        segments = self.generate_segments(max_block_length)
+        gcode_files = []
+
+        for segment in segments:
+            # Generate geometry if needed
+            if segment._geometry is None:
+                segment.generate_geometry()
+
+            # Export G-code
+            gcode_path = segment.export_gcode(output_dir)
+            gcode_files.append(gcode_path)
+
+        return gcode_files
+
+    def export_jigs(self, output_dir: Path):
+        """Generate 3D printable alignment jigs for this wing."""
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Root incidence jig
+        jig = JigFactory.generate_incidence_cradle(
+            self,
+            station_bl=23.0,
+            incidence_angle=config.geometry.wing_incidence
+        )
+        cq.exporters.export(
+            jig,
+            str(output_dir / f"JIG_{self.name}_root.stl")
+        )
 
 
 class CanardGenerator(WingGenerator):
@@ -438,10 +583,12 @@ class Fuselage(AircraftComponent):
             if profile.width > 1.0:  # Skip degenerate profiles
                 wire = self._create_bulkhead_wire(profile)
                 station_name = f"FS_{profile.station:.0f}"
+                bulkhead_path = output_path / f"{self.name}_{station_name}.dxf"
                 cq.exporters.export(
                     cq.Workplane("XY").add(wire),
-                    str(output_path / f"{self.name}_{station_name}.dxf"),
+                    str(bulkhead_path),
                     exportType="DXF"
                 )
+                self._write_artifact_metadata(bulkhead_path, artifact_type="DXF")
 
         return output_path / f"{self.name}_bulkheads.dxf"

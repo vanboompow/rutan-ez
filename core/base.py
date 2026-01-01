@@ -93,6 +93,7 @@ class AircraftComponent(ABC):
 
         step_file = output_path / f"{self.name}.step"
         cq.exporters.export(self._geometry, str(step_file))
+        self._write_artifact_metadata(step_file, artifact_type="STEP")
         return step_file
 
     def export_stl(self, output_path: Path, tolerance: float = 0.01) -> Path:
@@ -116,7 +117,18 @@ class AircraftComponent(ABC):
             exportType="STL",
             tolerance=tolerance
         )
+        self._write_artifact_metadata(stl_file, artifact_type="STL")
         return stl_file
+
+    def _write_artifact_metadata(self, artifact_path: Path, artifact_type: str) -> None:
+        """Persist standard metadata next to an exported artifact."""
+        from .metadata import write_artifact_metadata
+
+        write_artifact_metadata(
+            artifact_path=artifact_path,
+            component=self,
+            artifact_type=artifact_type,
+        )
 
     def add_metadata(self, key: str, value: Any) -> None:
         """Store metadata for documentation and compliance tracking."""
@@ -186,7 +198,9 @@ class FoamCore(AircraftComponent):
             kerf_offset=kerf_offset,
             feed_rate=feed_rate
         )
-        return writer.write(output_path / f"{self.name}.tap")
+        gcode_path = writer.write(output_path / f"{self.name}.tap")
+        self._write_artifact_metadata(gcode_path, artifact_type="GCODE")
+        return gcode_path
 
 
 class Bulkhead(AircraftComponent):

@@ -27,6 +27,16 @@ By treating the aircraft's physical definition as executable **Python code**, we
 2. **Install Dependencies:** `pip install -r requirements.txt`
 3. **Configure Your Build:** Edit `config/aircraft_config.py` to set your pilot height, engine choice, and structural preferences.
 4. **Generate Artifacts:** Run `python main.py --generate-all` to produce STEP, DXF, and G-code outputs.
+5. **Provenance & CI:** All artifacts in `output/` now emit a `*.metadata.json` file capturing git revision, configuration hash, and contributor. CI can call `python scripts/run_ci_checks.py` to ensure both configuration validity and artifact provenance before accepting generated files.
+
+## Contributing
+Our CI expects every pull request to prove both geometric determinism and aerodynamic sanity:
+
+* Run **pre-commit** locally to enforce linting, typing, and a lightweight geometry smoke test: `pre-commit run --all-files` (install with `pip install -r requirements-dev.txt`).
+* Use `python scripts/smoke_test.py` for a deeper check that exports STEP/STL/DXF/G-code artifacts. Include `--check-openvsp` once the OpenVSP Python API is installed to exercise physics validation.
+* GitHub Actions will reject PRs that fail geometry generation or OpenVSP validation and will publish generated STEP/DXF/STL/G-code bundles as build artifacts for review.
+
+> **Safety gate:** PRs that bypass the Roncz canard, break configuration validation, or skip OpenVSP checks will not be accepted.
 
 ## Regulatory Notice
 This project is intended for educational purposes and as a **Fabrication Aid** for amateur builders. Users are responsible for ensuring their specific build complies with local aviation authority regulations (e.g., FAA 14 CFR Part 21.191(g)).
