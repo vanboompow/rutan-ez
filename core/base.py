@@ -9,6 +9,7 @@ This enforces a consistent interface for geometry generation and export.
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Dict, Any
+import json
 import cadquery as cq
 
 
@@ -95,16 +96,28 @@ class AircraftComponent(ABC):
         cq.exporters.export(self._geometry, str(step_file))
         return step_file
 
-    def export_stl(self, output_path: Path, tolerance: float = 0.01) -> Path:
+    def export_stl(
+        self,
+        output_path: Path,
+        tolerance: float = 0.01,
+        infill: Optional[float] = None,
+        shells: Optional[int] = None,
+        orientation: Optional[str] = None,
+        write_manifest: bool = True
+    ) -> Path:
         """
         Export 3D geometry as STL for 3D printing jigs.
 
         Args:
             output_path: Directory for STL output
             tolerance: Mesh tessellation tolerance (inches)
+            infill: Optional infill percentage hint for slicers
+            shells: Optional number of perimeters/shells
+            orientation: Optional orientation descriptor for print prep
+            write_manifest: Persist adjacent JSON manifest with metadata
 
         Returns:
-            Path to the exported STL file
+            Path to the exported STL file (manifest written alongside when enabled)
         """
         if self._geometry is None:
             self.generate_geometry()
@@ -116,6 +129,28 @@ class AircraftComponent(ABC):
             exportType="STL",
             tolerance=tolerance
         )
+
+        if write_manifest:
+            bbox = self._geometry.val().BoundingBox()
+            manifest = {
+                "name": self.name,
+                "description": self.description,
+                "stl": stl_file.name,
+                "tolerance": tolerance,
+                "infill": infill,
+                "shells": shells,
+                "orientation": orientation or "model-space",
+                "bounding_box": {
+                    "x": bbox.xlen,
+                    "y": bbox.ylen,
+                    "z": bbox.zlen
+                },
+                "metadata": self._metadata,
+            }
+
+            manifest_path = stl_file.with_suffix(".json")
+            manifest_path.write_text(json.dumps(manifest, indent=2))
+
         return stl_file
 
     def add_metadata(self, key: str, value: Any) -> None:
