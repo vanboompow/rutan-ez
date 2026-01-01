@@ -9,6 +9,8 @@ Usage:
     python main.py --generate-all     Generate all components
     python main.py --canard           Generate canard only
     python main.py --wing             Generate wing only
+    python main.py --generate-gcode   Emit synchronized hot-wire G-code
+    python main.py --generate-jigs    Emit STL drill/incidence/vortilon jigs
     python main.py --validate         Validate configuration
     python main.py --compliance       Generate compliance report
 
@@ -120,6 +122,63 @@ def generate_compliance_report() -> None:
     print(f"  JSON data written to: {json_file}")
 
 
+def generate_gcode() -> None:
+    """Generate synchronized hot-wire G-code for wing and canard cores."""
+    from core.structures import WingGenerator, CanardGenerator
+    from core.aerodynamics import airfoil_factory
+
+    print("\n--- Generating Hot-Wire G-code ---")
+
+    manuf = config.manufacturing
+    kerf_lookup = manuf.kerf_compensation
+    foam_type = config.materials.wing_core_foam
+    kerf = kerf_lookup.get(foam_type, manuf.kerf_styrofoam)
+
+    gcode_dir = project_root / "output" / "gcode"
+    gcode_dir.mkdir(parents=True, exist_ok=True)
+
+    wing_airfoil = airfoil_factory.get_wing_airfoil(apply_reflex=True)
+    wing = WingGenerator(
+        name="main_wing", 
+        root_airfoil=wing_airfoil, 
+        tip_airfoil=wing_airfoil,
+        span=config.geometry.wing_span,
+        root_chord=config.geometry.wing_root_chord,
+        tip_chord=config.geometry.wing_tip_chord,
+        sweep_angle=config.geometry.wing_sweep_le,
+        dihedral_angle=config.geometry.wing_dihedral,
+        washout=config.geometry.wing_washout,
+        description="Long-EZ main wing hot-wire toolpath",
+    )
+
+    canard = CanardGenerator()
+
+    for label, component in (("Main wing", wing), ("Canard", canard)):
+        try:
+            path = component.export_gcode(
+                gcode_dir, kerf_offset=kerf, feed_rate=manuf.feed_rate_default
+            )
+            print(f"  {label} G-code: {path}")
+        except Exception as e:
+            print(f"  Error generating {label.lower()} G-code: {e}")
+
+
+def generate_jigs() -> None:
+    """Output STL drill guides, incidence cradles, and vortilon templates."""
+    from core.manufacturing import JigGenerator
+
+    print("\n--- Generating Jig STL Files ---")
+    stl_dir = project_root / "output" / "stl"
+    stl_dir.mkdir(parents=True, exist_ok=True)
+
+    generator = JigGenerator()
+    results = generator.generate_jigs(stl_dir)
+
+    for jig_type, items in results.items():
+        for item in items:
+            print(f"  {jig_type} [{item.station_label}]: {item.path}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Open-EZ Parametric Design Environment",
@@ -148,6 +207,16 @@ For more information, see README.md
         "--wing",
         action="store_true",
         help="Generate main wing only"
+    )
+    parser.add_argument(
+        "--generate-gcode",
+        action="store_true",
+        help="Generate synchronized 4-axis hot-wire G-code"
+    )
+    parser.add_argument(
+        "--generate-jigs",
+        action="store_true",
+        help="Generate STL incidence cradles, drill guides, and vortilon templates"
     )
     parser.add_argument(
         "--validate",
@@ -194,12 +263,20 @@ For more information, see README.md
         generate_canard()
         generate_wing()
         generate_compliance_report()
+        generate_gcode()
+        generate_jigs()
 
     if args.canard:
         generate_canard()
 
     if args.wing:
         generate_wing()
+
+    if args.generate_gcode:
+        generate_gcode()
+
+    if args.generate_jigs:
+        generate_jigs()
 
     if args.compliance:
         generate_compliance_report()
