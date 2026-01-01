@@ -1,0 +1,12 @@
+{
+  "wing_reflex_moment": {
+    "cm_at_trim": -0.013250000000000001
+  },
+  "lift_curve_slope": {
+    "cl_per_deg": 0.095
+  },
+  "spar_tip_deflection": {
+    "tip_deflection_in": 237785.06333002937,
+    "spar_stress_psi": 6089965.397923875
+  }
+}

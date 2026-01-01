@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
 """
-Open-EZ PDE: Main Entry Point
-=============================
-
-Parametric Design Environment for the modernized Long-EZ.
+Open-EZ PDE: Main Entry Point (Upgraded)
+========================================
 
 Usage:
-    python main.py --generate-all     Generate all components
-    python main.py --canard           Generate canard only
-    python main.py --wing             Generate wing only
-    python main.py --validate         Validate configuration
-    python main.py --compliance       Generate compliance report
+    python main.py --generate-all     Generate all artifacts (CAD, CNC, Docs)
+    python main.py --analysis         Run physics/stability checks
+    python main.py --jigs             Generate 3D printable tooling
 
-All dimensions derive from config/aircraft_config.py (SSOT).
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-# Ensure project root is in path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from config import config
+from core.structures import CanardGenerator, WingGenerator, Fuselage
+from core.analysis import physics, VSPBridge
+from core.manufacturing import JigFactory
 
 
 def validate_config() -> bool:
@@ -41,10 +38,76 @@ def validate_config() -> bool:
     return True
 
 
+def validate_physics() -> bool:
+    """Run lightweight physics regressions against stored baselines."""
+    from core.simulation.regression import RegressionRunner
+
+    print("\n--- Validating Physics Models ---")
+    report_dir = project_root / "output" / "reports"
+    baseline = project_root / "tests" / "snapshots" / "physics_baseline.json"
+
+    runner = RegressionRunner()
+    passed, current, failures = runner.compare_to_baseline(
+        baseline_path=baseline, report_dir=report_dir
+    )
+
+    if passed:
+        print("  Physics regressions PASSED")
+    else:
+        print("  Physics regressions FAILED:")
+        for failure in failures:
+            print(f"   - {failure}")
+
+    polars_path = (project_root / "output" / "reports" / "vspaero_polars.json")
+    runner.aero.serialize_polars(target=polars_path)
+    return passed
+
+
+def run_analysis():
+    """Run physics stability checks."""
+    print("\n--- Running Flight Physics Analysis ---")
+    metrics = physics.calculate_cg_envelope()
+
+    print(f"  Neutral Point: {metrics.neutral_point:.2f} in")
+    print(f"  Estimated CG:  {metrics.cg_location:.2f} in")
+    print(f"  Static Margin: {metrics.static_margin:.1f}%")
+
+    if metrics.is_stable:
+        print("  STATUS: STABLE (Margin within 5-20% safe range)")
+    else:
+        print("  STATUS: WARNING - Review Weight & Balance")
+
+    # Export VSP
+    vsp_dir = project_root / "output" / "VSP"
+    vsp_dir.mkdir(parents=True, exist_ok=True)
+    VSPBridge.export_vsp_script(vsp_dir / "model.vspscript")
+    print(f"  OpenVSP script exported to output/VSP/")
+
+
+def generate_manufacturing():
+    """Generate physical production artifacts."""
+    print("\n--- Generating Manufacturing Artifacts ---")
+
+    # 1. CNC G-Code (Foam Cores)
+    gcode_dir = project_root / "output" / "GCODE"
+    gcode_dir.mkdir(parents=True, exist_ok=True)
+
+    canard = CanardGenerator()
+    canard.export_gcode(gcode_dir)
+    print(f"  CNC: Canard G-code written to {gcode_dir}")
+
+    # 2. 3D Printable Jigs
+    stl_dir = project_root / "output" / "STL"
+    stl_dir.mkdir(parents=True, exist_ok=True)
+
+    # Example: Generate incidence jigs
+    canard.export_jigs(stl_dir)
+    JigFactory.export_all_jigs(stl_dir)
+    print(f"  3D PRINT: Assembly jigs written to {stl_dir}")
+
+
 def generate_canard() -> None:
     """Generate canard foam core."""
-    from core.structures import CanardGenerator
-
     print("\n--- Generating Canard ---")
     canard = CanardGenerator()
 
@@ -67,7 +130,6 @@ def generate_canard() -> None:
 
 def generate_wing() -> None:
     """Generate main wing foam cores."""
-    from core.structures import WingGenerator
     from core.aerodynamics import airfoil_factory
 
     print("\n--- Generating Main Wing ---")
@@ -120,63 +182,70 @@ def generate_compliance_report() -> None:
     print(f"  JSON data written to: {json_file}")
 
 
+def nest_sheets() -> None:
+    """Nest generated DXFs onto stock sheet sizes."""
+    from core.nesting import NestingPlanner
+
+    print("\n--- Nesting DXF Sheets ---")
+    dxf_dir = project_root / "output" / "DXF"
+    nested_dir = project_root / "output" / "nested"
+
+    if not dxf_dir.exists():
+        print("  No DXF directory found. Run geometry exports first.")
+        return
+
+    planner = NestingPlanner(
+        stock_sheets=config.manufacturing.stock_sheets,
+        margin=0.25,
+        spacing=0.125,
+        dogbone_radius=config.manufacturing.default_dogbone_radius,
+        fillet_radius=config.manufacturing.default_fillet_radius,
+    )
+
+    laminate_keys = list(config.materials.laminates.keys())
+    default_laminate = laminate_keys[0] if laminate_keys else None
+
+    outlines = planner.load_outlines(dxf_dir, laminate=default_laminate)
+    if not outlines:
+        print("  No DXF outlines found to nest.")
+        return
+
+    laminate_orders = {
+        name: lam.cut_order_steps() for name, lam in config.materials.laminates.items()
+    }
+
+    placements = planner.pack(outlines)
+    manifest = planner.export(
+        placements,
+        nested_dir,
+        engraving_depth=config.manufacturing.engraving_depth,
+        laminate_cut_orders=laminate_orders,
+    )
+
+    print(f"  Nested sheets written to: {nested_dir}")
+    print(f"  Manifest written to: {manifest}")
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Open-EZ Parametric Design Environment",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    python main.py --validate         Check configuration
-    python main.py --generate-all     Generate all components
-    python main.py --canard           Generate canard only
-
-For more information, see README.md
-        """
-    )
-
-    parser.add_argument(
-        "--generate-all",
-        action="store_true",
-        help="Generate all aircraft components"
-    )
-    parser.add_argument(
-        "--canard",
-        action="store_true",
-        help="Generate canard foam core only"
-    )
-    parser.add_argument(
-        "--wing",
-        action="store_true",
-        help="Generate main wing only"
-    )
-    parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate configuration only"
-    )
-    parser.add_argument(
-        "--compliance",
-        action="store_true",
-        help="Generate FAA compliance report"
-    )
-    parser.add_argument(
-        "--summary",
-        action="store_true",
-        help="Show configuration summary"
-    )
+    parser = argparse.ArgumentParser(description="Open-EZ PDE Environment")
+    parser.add_argument("--generate-all", action="store_true", help="Generate CAD, CNC, and Docs")
+    parser.add_argument("--analysis", action="store_true", help="Run physics analysis")
+    parser.add_argument("--jigs", action="store_true", help="Generate 3D printing jigs")
+    parser.add_argument("--canard", action="store_true", help="Generate canard only")
+    parser.add_argument("--wing", action="store_true", help="Generate main wing only")
+    parser.add_argument("--validate", action="store_true", help="Validate configuration only")
+    parser.add_argument("--validate-physics", action="store_true", help="Validate aerodynamic/structural regressions")
+    parser.add_argument("--compliance", action="store_true", help="Generate FAA compliance report")
+    parser.add_argument("--nest-sheets", action="store_true", help="Nest DXF outlines onto stock sheets")
+    parser.add_argument("--summary", action="store_true", help="Show configuration summary")
 
     args = parser.parse_args()
 
-    # Default to showing summary if no args
     if len(sys.argv) == 1:
-        print(config.summary())
         parser.print_help()
-        return 0
+        return
 
-    print("=" * 60)
-    print(f"Open-EZ PDE v{config.version}")
-    print(f"Baseline: {config.baseline}")
-    print("=" * 60)
+    print(f"Open-EZ PDE v{config.version} [{config.baseline}]")
 
     if args.summary:
         print(config.summary())
@@ -185,31 +254,39 @@ For more information, see README.md
     if args.validate:
         return 0 if validate_config() else 1
 
+    if args.validate_physics:
+        return 0 if validate_physics() else 1
+
     # Validate before generating
     if not validate_config():
         print("\nAborting due to configuration errors.")
         return 1
+
+    if args.analysis or args.generate_all:
+        run_analysis()
+
+    if args.jigs or args.generate_all:
+        generate_manufacturing()
 
     if args.generate_all:
         generate_canard()
         generate_wing()
         generate_compliance_report()
 
-    if args.canard:
+    if args.canard and not args.generate_all:
         generate_canard()
 
-    if args.wing:
+    if args.wing and not args.generate_all:
         generate_wing()
 
-    if args.compliance:
+    if args.compliance and not args.generate_all:
         generate_compliance_report()
 
-    print("\n" + "=" * 60)
-    print("Done.")
-    print("=" * 60)
+    if args.nest_sheets:
+        nest_sheets()
 
-    return 0
+    print("\nDone.")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
