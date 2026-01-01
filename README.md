@@ -22,6 +22,9 @@ By treating the aircraft's physical definition as executable **Python code**, we
 * **Numerical Analysis:** NumPy, SciPy
 * **Compliance:** Automated FAA Form 8000-38 (51% Rule) tracking
 
+## Architecture & Roadmap
+For the planned evolution toward CNC + 3D-print-ready outputs with physics-backed validation, see [`docs/architecture_improvements.md`](docs/architecture_improvements.md).
+
 ## Getting Started
 1. **Clone the Repo:** `git clone https://github.com/your-org/open-ez-pde.git`
 2. **Install Dependencies:** `pip install -r requirements.txt`
