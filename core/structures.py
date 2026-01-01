@@ -232,26 +232,28 @@ class WingGenerator(FoamCore):
 
     def export_dxf(self, output_path: Path) -> Path:
         """Export root and tip templates as DXF."""
-        dxf_file = output_path / f"{self.name}_templates.dxf"
-
         # Export root profile
         root_wire = self.get_root_profile()
         # CadQuery DXF export
+        root_path = output_path / f"{self.name}_root.dxf"
         cq.exporters.export(
             cq.Workplane("XY").add(root_wire),
-            str(output_path / f"{self.name}_root.dxf"),
+            str(root_path),
             exportType="DXF"
         )
+        self._write_artifact_metadata(root_path, artifact_type="DXF")
 
         # Export tip profile
         tip_wire = self.get_tip_profile()
+        tip_path = output_path / f"{self.name}_tip.dxf"
         cq.exporters.export(
             cq.Workplane("XY").add(tip_wire),
-            str(output_path / f"{self.name}_tip.dxf"),
+            str(tip_path),
             exportType="DXF"
         )
+        self._write_artifact_metadata(tip_path, artifact_type="DXF")
 
-        return dxf_file
+        return output_path / f"{self.name}_templates.dxf"
 
 
 class CanardGenerator(WingGenerator):
@@ -438,10 +440,12 @@ class Fuselage(AircraftComponent):
             if profile.width > 1.0:  # Skip degenerate profiles
                 wire = self._create_bulkhead_wire(profile)
                 station_name = f"FS_{profile.station:.0f}"
+                bulkhead_path = output_path / f"{self.name}_{station_name}.dxf"
                 cq.exporters.export(
                     cq.Workplane("XY").add(wire),
-                    str(output_path / f"{self.name}_{station_name}.dxf"),
+                    str(bulkhead_path),
                     exportType="DXF"
                 )
+                self._write_artifact_metadata(bulkhead_path, artifact_type="DXF")
 
         return output_path / f"{self.name}_bulkheads.dxf"

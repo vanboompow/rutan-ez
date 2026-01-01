@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import json
 
 from config import config
@@ -45,6 +45,7 @@ class BuildTask:
     completion_date: Optional[datetime] = None
     notes: str = ""
     photo_paths: List[str] = field(default_factory=list)
+    artifact_id: Optional[str] = None
 
     @property
     def builder_credit(self) -> float:
@@ -64,6 +65,19 @@ class BuildTask:
             return self.base_credit * 0.5  # Reduced credit for kits
         else:
             return 0.0  # No credit for outsourced work
+
+    @property
+    def is_builder_completed(self) -> bool:
+        """True when the task earned builder credit (manual or builder CNC)."""
+        return self.completed and self.method in (
+            ManufacturingMethod.BUILDER_MANUAL,
+            ManufacturingMethod.BUILDER_CNC,
+        )
+
+    @property
+    def is_automated(self) -> bool:
+        """True when the task was completed via commercial or outsourced means."""
+        return self.completed and not self.is_builder_completed
 
 
 class ComplianceTracker:
@@ -88,80 +102,81 @@ class ComplianceTracker:
     def _init_standard_tasks(self) -> None:
         """Populate with standard Long-EZ build tasks from config."""
         # Map config task credits to BuildTask objects
-        task_definitions = [
+        task_definitions: List[Tuple[str, str, CreditCategory, float, str]] = [
             # Wing fabrication
             ("wing_cores_left", "Fabricate left wing foam cores",
-             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_cores_cnc", 0.04)),
+             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_cores_cnc", 0.04), "main_wing"),
             ("wing_cores_right", "Fabricate right wing foam cores",
-             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_cores_cnc", 0.04)),
+             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_cores_cnc", 0.04), "main_wing"),
             ("wing_skins_left", "Layup left wing fiberglass skins",
-             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_skins_layup", 0.06)),
+             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_skins_layup", 0.06), "main_wing"),
             ("wing_skins_right", "Layup right wing fiberglass skins",
-             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_skins_layup", 0.06)),
+             CreditCategory.FABRICATION, config.compliance.task_credits.get("wing_skins_layup", 0.06), "main_wing"),
 
             # Canard fabrication
             ("canard_cores", "Fabricate canard foam cores (Roncz R1145MS)",
-             CreditCategory.FABRICATION, 0.05),
+             CreditCategory.FABRICATION, 0.05, "canard"),
             ("canard_skins", "Layup canard fiberglass skins",
-             CreditCategory.FABRICATION, 0.05),
+             CreditCategory.FABRICATION, 0.05, "canard"),
 
             # Fuselage fabrication
             ("fuselage_bulkheads", "Fabricate fuselage bulkheads (F22, F28, etc.)",
-             CreditCategory.FABRICATION, 0.06),
+             CreditCategory.FABRICATION, 0.06, "fuselage"),
             ("fuselage_sides", "Layup fuselage side panels",
-             CreditCategory.FABRICATION, 0.05),
+             CreditCategory.FABRICATION, 0.05, "fuselage"),
             ("fuselage_bottom", "Layup fuselage bottom",
-             CreditCategory.FABRICATION, 0.04),
+             CreditCategory.FABRICATION, 0.04, "fuselage"),
 
             # Fuselage assembly
             ("fuselage_assembly", "Assemble fuselage structure (boxing)",
-             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("fuselage_assembly", 0.08)),
+             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("fuselage_assembly", 0.08), "fuselage"),
 
             # Control system
             ("control_surfaces", "Fabricate ailerons and elevators",
-             CreditCategory.FABRICATION, 0.04),
+             CreditCategory.FABRICATION, 0.04, "control_system"),
             ("control_linkages", "Install control linkages and cables",
-             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("control_system", 0.04)),
+             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("control_system", 0.04), "control_system"),
 
             # Landing gear
             ("main_gear", "Fabricate main landing gear bow",
-             CreditCategory.FABRICATION, 0.03),
+             CreditCategory.FABRICATION, 0.03, "landing_gear"),
             ("nose_gear", "Install nose gear assembly",
-             CreditCategory.ASSEMBLY, 0.03),
+             CreditCategory.ASSEMBLY, 0.03, "landing_gear"),
 
             # Strakes (fuel tanks)
             ("strake_cores", "Fabricate strake foam cores",
-             CreditCategory.FABRICATION, 0.04),
+             CreditCategory.FABRICATION, 0.04, "strakes"),
             ("strake_skins", "Layup strake skins and baffles",
-             CreditCategory.FABRICATION, 0.04),
+             CreditCategory.FABRICATION, 0.04, "strakes"),
 
             # Engine installation
             ("engine_mount", "Fabricate/install engine mount",
-             CreditCategory.ASSEMBLY, 0.03),
+             CreditCategory.ASSEMBLY, 0.03, "engine_install"),
             ("engine_baffles", "Fabricate engine baffles",
-             CreditCategory.FABRICATION, 0.02),
+             CreditCategory.FABRICATION, 0.02, "engine_install"),
 
             # Electrical
             ("wiring_harness", "Fabricate and install wiring harness",
-             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("electrical", 0.04)),
+             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("electrical", 0.04), "electrical"),
 
             # Finishing
             ("surface_prep", "Sand and prepare surfaces",
-             CreditCategory.FABRICATION, 0.03),
+             CreditCategory.FABRICATION, 0.03, "finish"),
             ("paint", "Apply paint/finish",
-             CreditCategory.FABRICATION, 0.03),
+             CreditCategory.FABRICATION, 0.03, "finish"),
 
             # Final assembly
             ("systems_integration", "Final systems integration and testing",
-             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("final_assembly", 0.10)),
+             CreditCategory.ASSEMBLY, config.compliance.task_credits.get("final_assembly", 0.10), "final_assembly"),
         ]
 
-        for task_id, description, category, credit in task_definitions:
+        for task_id, description, category, credit, artifact_id in task_definitions:
             self._tasks[task_id] = BuildTask(
                 task_id=task_id,
                 description=description,
                 category=category,
-                base_credit=credit
+                base_credit=credit,
+                artifact_id=artifact_id,
             )
 
     def get_task(self, task_id: str) -> BuildTask:
@@ -175,7 +190,8 @@ class ComplianceTracker:
         task_id: str,
         method: ManufacturingMethod,
         notes: str = "",
-        photo_paths: Optional[List[str]] = None
+        photo_paths: Optional[List[str]] = None,
+        artifact_id: Optional[str] = None,
     ) -> None:
         """
         Mark a task as completed.
@@ -192,6 +208,7 @@ class ComplianceTracker:
         task.method = method
         task.notes = notes
         task.photo_paths = photo_paths or []
+        task.artifact_id = artifact_id or task.artifact_id
 
     @property
     def total_credit(self) -> float:
@@ -216,6 +233,40 @@ class ComplianceTracker:
         """Get list of completed tasks."""
         return [t for t in self._tasks.values() if t.completed]
 
+    def artifact_rollups(self) -> Dict[str, Dict[str, float]]:
+        """Roll up builder vs automated work by artifact for FAA 8000-38."""
+
+        rollups: Dict[str, Dict[str, float]] = {}
+        for task in self._tasks.values():
+            artifact_key = task.artifact_id or "unspecified"
+            entry = rollups.setdefault(
+                artifact_key,
+                {
+                    "builder_tasks": 0,
+                    "automated_tasks": 0,
+                    "pending_tasks": 0,
+                    "builder_credit": 0.0,
+                    "automation_credit": 0.0,
+                },
+            )
+
+            if not task.completed:
+                entry["pending_tasks"] += 1
+                continue
+
+            builder_credit = task.builder_credit
+            automation_credit = max(task.base_credit - builder_credit, 0.0)
+
+            if task.is_builder_completed:
+                entry["builder_tasks"] += 1
+            elif task.is_automated:
+                entry["automated_tasks"] += 1
+
+            entry["builder_credit"] += builder_credit
+            entry["automation_credit"] += automation_credit
+
+        return rollups
+
     def generate_report(self) -> str:
         """
         Generate FAA Form 8000-38 style report.
@@ -225,6 +276,7 @@ class ComplianceTracker:
         """
         completed = self.get_completed_tasks()
         incomplete = self.get_incomplete_tasks()
+        rollups = self.artifact_rollups()
 
         report = f"""
 # FAA Amateur-Built Compliance Report
@@ -268,6 +320,21 @@ Aircraft: {config.project_name} ({config.baseline})
         report += f"""
 ---
 
+## Artifact Rollups (FAA Form 8000-38)
+
+| Artifact | Builder Tasks | Automated Tasks | Pending Tasks | Builder Credit | Automation Credit |
+|----------|---------------|-----------------|---------------|----------------|-------------------|
+"""
+        for artifact, data in rollups.items():
+            report += (
+                f"| {artifact} | {data['builder_tasks']} | {data['automated_tasks']} | "
+                f"{data['pending_tasks']} | {data['builder_credit']:.1%} | "
+                f"{data['automation_credit']:.1%} |\n"
+            )
+
+        report += f"""
+---
+
 ## Notes
 
 - All CNC operations must be **builder-operated** to receive full credit.
@@ -300,6 +367,7 @@ Aircraft: {config.project_name} ({config.baseline})
                 "required": self.REQUIRED_CREDIT,
                 "compliant": self.is_compliant,
             },
+            "rollups": self.artifact_rollups(),
             "tasks": [
                 {
                     "id": t.task_id,
@@ -312,6 +380,7 @@ Aircraft: {config.project_name} ({config.baseline})
                     "builder_credit": t.builder_credit,
                     "notes": t.notes,
                     "photos": t.photo_paths,
+                    "artifact": t.artifact_id,
                 }
                 for t in self._tasks.values()
             ]

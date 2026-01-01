@@ -1,14 +1,7 @@
-# Open-EZ PDE Core Module
-from .base import AircraftComponent
-from .aerodynamics import AirfoilFactory, Airfoil
-from .structures import WingGenerator, Fuselage
-from .compliance import ComplianceTracker
+"""Core package for Open-EZ PDE."""
 
-__all__ = [
-    "AircraftComponent",
-    "AirfoilFactory",
-    "Airfoil",
-    "WingGenerator",
-    "Fuselage",
-    "ComplianceTracker",
-]
+# Heavy CadQuery imports are intentionally avoided here so lightweight
+# utilities (e.g., metadata validation) can import without requiring
+# OCC runtime libraries.
+
+__all__ = []
