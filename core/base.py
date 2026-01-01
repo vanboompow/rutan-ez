@@ -88,9 +88,7 @@ class AircraftComponent(ABC):
         Returns:
             Path to the exported STEP file
         """
-        if self._geometry is None:
-            self.generate_geometry()
-
+        output_path.mkdir(parents=True, exist_ok=True)
         step_file = output_path / f"{self.name}.step"
         cq.exporters.export(self._geometry, str(step_file))
         self._write_artifact_metadata(step_file, artifact_type="STEP")
@@ -107,9 +105,7 @@ class AircraftComponent(ABC):
         Returns:
             Path to the exported STL file
         """
-        if self._geometry is None:
-            self.generate_geometry()
-
+        output_path.mkdir(parents=True, exist_ok=True)
         stl_file = output_path / f"{self.name}.stl"
         cq.exporters.export(
             self._geometry,
@@ -198,6 +194,7 @@ class FoamCore(AircraftComponent):
             kerf_offset=kerf_offset,
             feed_rate=feed_rate
         )
+        output_path.mkdir(parents=True, exist_ok=True)
         gcode_path = writer.write(output_path / f"{self.name}.tap")
         self._write_artifact_metadata(gcode_path, artifact_type="GCODE")
         return gcode_path

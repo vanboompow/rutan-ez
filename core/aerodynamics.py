@@ -30,13 +30,15 @@ class AirfoilCoordinates:
 
     @property
     def x(self) -> np.ndarray:
-        """Combined x coordinates (upper then lower, reversed)."""
-        return np.concatenate([self.x_upper, self.x_lower[::-1]])
+        """Combined x coordinates (upper then lower, reversed, no duplicate LE)."""
+        # Skip first point of reversed lower to avoid duplicate LE
+        return np.concatenate([self.x_upper, self.x_lower[::-1][1:]])
 
     @property
     def y(self) -> np.ndarray:
-        """Combined y coordinates (upper then lower, reversed)."""
-        return np.concatenate([self.y_upper, self.y_lower[::-1]])
+        """Combined y coordinates (upper then lower, reversed, no duplicate LE)."""
+        # Skip first point of reversed lower to avoid duplicate LE
+        return np.concatenate([self.y_upper, self.y_lower[::-1][1:]])
 
 
 class Airfoil:

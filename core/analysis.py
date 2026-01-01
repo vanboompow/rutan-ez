@@ -13,7 +13,7 @@ Key Metrics:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import json
 import math
 from config import config
@@ -484,6 +484,7 @@ physics = PhysicsEngine()
 from datetime import datetime
 from dataclasses import asdict
 from typing import Any
+from .vsp_integration import vsp_bridge
 import logging
 
 logger = logging.getLogger(__name__)
@@ -537,11 +538,11 @@ class OpenVSPRunner:
     not installed, falling back to physics-informed surrogates.
     """
 
-    def __init__(self, cache_dir: Path | str = Path("data/validation")):
+    def __init__(self, cache_dir: Union[Path, str] = Path("data/validation")):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_path = self.cache_dir / "openvsp_validation.json"
-        self._vsp: Optional[Any] = None
+        self._vsp = vsp_bridge  # Use the formal bridge
 
     def build_parametric_model(self) -> Dict[str, Any]:
         """
@@ -602,15 +603,7 @@ class OpenVSPRunner:
         return trim_result, clmax_result, self.cache_path
 
     def _try_import_vsp(self) -> Optional[Any]:
-        if self._vsp is None:
-            try:
-                import openvsp as vsp  # type: ignore
-                self._vsp = vsp
-                logger.info("OpenVSP Python bindings detected; using native solver")
-            except ImportError:
-                logger.warning("OpenVSP not installed. Using surrogate aerodynamic model.")
-                self._vsp = None
-        return self._vsp
+        return vsp_bridge if vsp_bridge.has_vsp else None
 
     def _run_trim_sweep(
         self,

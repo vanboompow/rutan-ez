@@ -7,15 +7,30 @@ Handles the translation of abstract geometry into machine instructions.
 2. JigFactory: Generates 3D-printable assembly aids (incidence cradles).
 """
 
+from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union, TYPE_CHECKING
 import numpy as np
 import cadquery as cq
+import logging
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from .base import FoamCore
 
 from .base import AircraftComponent
 from config import config
 
+
+@dataclass
+class HotWireProcess:
+    """Defines the relationship between material and cutting parameters."""
+    foam_type: str
+    wire_temp_f: float
+    kerf_in: float
+    max_feed_ipm: float
+    notes: str = ""
 
 @dataclass
 class GCodeConfig:
@@ -26,6 +41,8 @@ class GCodeConfig:
     wire_kerf: float = 0.045        # Material removal width
     preheat_time: float = 2.0       # Seconds to wait for wire temp
     lead_in_distance: float = 1.0   # Entry/exit distance from foam
+    machine_type: str = "4-axis-hotwire"
+    coord_system: str = "G20"       # Inches
 
 
 @dataclass
@@ -735,3 +752,74 @@ class JigFactory:
             cq.exporters.export(vortilon, str(output_dir / "TEMPLATE_vortilon.stl"))
         except Exception as e:
             print(f"  Warning: Could not generate vortilon template: {e}")
+class GCodeEngine:
+    """
+    High-level orchestrator for manufacturing output.
+    
+    Manages:
+    - Material-specific process calibration (Kerf vs Speed)
+    - Batch generation for multiple wing segments
+    - Automated artifact naming and storage
+    """
+
+    def __init__(self, output_root: Union[Path, str] = Path("output/gcode")):
+        self.output_root = Path(output_root)
+        self.output_root.mkdir(parents=True, exist_ok=True)
+        
+        # Calibration database (Foam Type -> Process)
+        self.processes = {
+            "styrofoam_blue": HotWireProcess(
+                foam_type="styrofoam_blue",
+                wire_temp_f=400.0,
+                kerf_in=0.045,
+                max_feed_ipm=5.0,
+                notes="Standard wing foam"
+            ),
+            "urethane_2lb": HotWireProcess(
+                foam_type="urethane_2lb",
+                wire_temp_f=500.0,
+                kerf_in=0.035,
+                max_feed_ipm=3.5,
+                notes="High-temp fuselage foam"
+            ),
+            "divinycell_h45": HotWireProcess(
+                foam_type="divinycell_h45",
+                wire_temp_f=550.0,
+                kerf_in=0.030,
+                max_feed_ipm=2.0,
+                notes="Structural PVC foam"
+            )
+        }
+
+    def get_process(self, foam_type: str) -> HotWireProcess:
+        """Retrieve calibrated process for a specific foam."""
+        return self.processes.get(foam_type.lower(), self.processes["styrofoam_blue"])
+
+    def generate_component_gcode(self, component: 'FoamCore', foam_name: str = "styrofoam_blue") -> Path:
+        """
+        Calibrate and export G-code for a whole component.
+        """
+        process = self.get_process(foam_name)
+        
+        # Configure the writer based on calibrated process
+        mfg_config = GCodeConfig(
+            feed_rate=process.max_feed_ipm,
+            wire_kerf=process.kerf_in
+        )
+        
+        writer = GCodeWriter(
+            root_profile=component.get_root_profile(),
+            tip_profile=component.get_tip_profile(),
+            kerf_offset=process.kerf_in,
+            feed_rate=process.max_feed_ipm,
+            config=mfg_config
+        )
+        
+        target_file = self.output_root / f"{component.name}.tap"
+        return writer.write(target_file)
+
+    def calibrate_kerf(self, foam_type: str, measured_kerf: float):
+        """Update calibration for a specific material after a test cut."""
+        if foam_type in self.processes:
+            self.processes[foam_type].kerf_in = measured_kerf
+            logger.info(f"Calibrated {foam_type} kerf to {measured_kerf:.4f} in")
