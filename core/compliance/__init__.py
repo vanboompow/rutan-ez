@@ -22,10 +22,11 @@ from config import config
 class ManufacturingMethod(Enum):
     """Methods for fabricating aircraft components."""
 
-    BUILDER_MANUAL = "builder_manual"  # Hand layup, hand cutting
-    BUILDER_CNC = "builder_cnc"  # Builder operates CNC
-    COMMERCIAL_KIT = "commercial_kit"  # Pre-fab kit parts
-    COMMERCIAL_SERVICE = "commercial_service"  # Outsourced fabrication
+    BUILDER_MANUAL = "builder_manual"           # Hand layup, hand cutting
+    BUILDER_CNC = "builder_cnc"                 # Builder operates CNC
+    BUILDER_HELPER = "builder_helper"           # Helper assists under builder supervision
+    COMMERCIAL_KIT = "commercial_kit"           # Pre-fab kit parts
+    COMMERCIAL_SERVICE = "commercial_service"   # Outsourced fabrication
 
 
 class CreditCategory(Enum):
@@ -65,10 +66,16 @@ class BuildTask:
             ManufacturingMethod.BUILDER_CNC,
         ):
             return self.base_credit
-        elif self.method == ManufacturingMethod.COMMERCIAL_KIT:
+
+        if self.method == ManufacturingMethod.BUILDER_HELPER:
+            # Helper-assisted work gets partial credit; builder must still
+            # direct and operate tools to satisfy the FAA "major portion" rule.
+            return self.base_credit * 0.5
+
+        if self.method == ManufacturingMethod.COMMERCIAL_KIT:
             return self.base_credit * 0.5  # Reduced credit for kits
-        else:
-            return 0.0  # No credit for outsourced work
+
+        return 0.0  # No credit for outsourced work
 
 
 class ComplianceTracker:
@@ -401,3 +408,6 @@ Aircraft: {config.project_name} ({config.baseline})
 
 # Module-level tracker instance
 compliance_tracker = ComplianceTracker()
+
+# Task checklist/credit mapping helper
+from .tracker import ComplianceTaskTracker, TaskRole, compliance_task_tracker  # noqa: E402,F401
