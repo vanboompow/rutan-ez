@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Dict, Any
 import cadquery as cq
+from config import config
 
 
 class AircraftComponent(ABC):
@@ -75,6 +76,20 @@ class AircraftComponent(ABC):
         Implementation must:
         1. Project geometry to 2D as appropriate
         2. Include alignment marks and part identification
+        """
+        pass
+
+    @abstractmethod
+    def manufacturing_plan(self, output_path: Path) -> Dict[str, Any]:
+        """
+        Generate manufacturing artifacts and report their tolerances.
+
+        Args:
+            output_path: Directory where manufacturing files are written.
+
+        Returns:
+            Mapping of artifact class (e.g., printable jig, CNC foam) to
+            metadata describing the generated file (path, format, tolerance).
         """
         pass
 
@@ -198,7 +213,13 @@ class Bulkhead(AircraftComponent):
     Primary output is DXF for laser cutting.
     """
 
-    def __init__(self, name: str, station: float, description: str = ""):
+    def __init__(
+        self,
+        name: str,
+        station: float,
+        description: str = "",
+        thickness: Optional[float] = None
+    ):
         """
         Initialize a bulkhead at a fuselage station.
 
@@ -209,8 +230,58 @@ class Bulkhead(AircraftComponent):
         """
         super().__init__(name, description)
         self.station = station
+        self.thickness = thickness or config.materials.foam_core_thickness
 
     @abstractmethod
     def get_profile(self) -> cq.Wire:
         """Return the 2D bulkhead outline."""
         pass
+
+    def generate_geometry(self) -> cq.Workplane:
+        """Extrude the 2D bulkhead profile to the specified thickness."""
+        profile = self.get_profile()
+        self._geometry = cq.Workplane("XY").add(profile).extrude(self.thickness)
+        return self._geometry
+
+    def export_dxf(self, output_path: Path) -> Path:
+        """Export the bulkhead profile as DXF for routing or tracing."""
+        profile = self.get_profile()
+        output_file = output_path / f"{self.name}.dxf"
+        cq.exporters.export(cq.Workplane("XY").add(profile), str(output_file), exportType="DXF")
+        return output_file
+
+    def manufacturing_plan(self, output_path: Path) -> Dict[str, Any]:
+        """Create DXF templates and printable jigs for the bulkhead."""
+        output_path.mkdir(parents=True, exist_ok=True)
+        intents = config.manufacturing.component_intents.get("bulkhead")
+
+        dxf_path = self.export_dxf(output_path)
+        stl_path = self.export_stl(output_path, tolerance=intents.printable_jigs.tolerance)
+        step_path = self.export_step(output_path)
+
+        return {
+            "sheet_templates": {
+                "path": dxf_path,
+                "format": intents.sheet_templates.format,
+                "tolerance": intents.sheet_templates.tolerance,
+                "artifact": intents.sheet_templates.artifact,
+            },
+            "printable_jigs": {
+                "path": stl_path,
+                "format": intents.printable_jigs.format,
+                "tolerance": intents.printable_jigs.tolerance,
+                "artifact": intents.printable_jigs.artifact,
+            },
+            "cad_step": {
+                "path": step_path,
+                "format": "STEP",
+                "tolerance": None,
+                "artifact": "bulkhead_solid",
+            },
+            "cnc_foam": {
+                "path": dxf_path,
+                "format": intents.cnc_foam.format,
+                "tolerance": intents.cnc_foam.tolerance,
+                "artifact": intents.cnc_foam.artifact,
+            },
+        }

@@ -14,7 +14,7 @@ All dimensions derive from config/aircraft_config.py.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import cadquery as cq
 
@@ -402,6 +402,56 @@ class WingGenerator(FoamCore):
             self, station_bl=23.0, incidence_angle=config.geometry.wing_incidence
         )
         cq.exporters.export(jig, str(output_dir / f"JIG_{self.name}_root.stl"))
+
+    def manufacturing_plan(self, output_path: Path) -> Dict[str, Any]:
+        """Generate STEP/STL/DXF/G-code outputs for the foam core."""
+        output_path.mkdir(parents=True, exist_ok=True)
+        component_key = "canard" if "canard" in self.name else "wing"
+        intents = config.manufacturing.component_intents.get(component_key)
+
+        foam_type = (
+            config.materials.wing_core_foam
+            if component_key == "wing"
+            else config.materials.fuselage_foam
+        )
+        kerf = config.manufacturing.kerf_compensation.get(foam_type, 0.04)
+
+        step_path = self.export_step(output_path)
+        stl_path = self.export_stl(output_path, tolerance=intents.printable_jigs.tolerance)
+        dxf_path = self.export_dxf(output_path)
+        gcode_path = self.export_gcode(
+            output_path,
+            kerf_offset=kerf,
+            feed_rate=config.manufacturing.feed_rate_default,
+        )
+
+        return {
+            "cad_step": {
+                "path": step_path,
+                "format": "STEP",
+                "tolerance": None,
+                "artifact": f"{self.name}_solid",
+            },
+            "printable_jigs": {
+                "path": stl_path,
+                "format": intents.printable_jigs.format,
+                "tolerance": intents.printable_jigs.tolerance,
+                "artifact": intents.printable_jigs.artifact,
+            },
+            "sheet_templates": {
+                "path": dxf_path,
+                "format": intents.sheet_templates.format,
+                "tolerance": intents.sheet_templates.tolerance,
+                "artifact": intents.sheet_templates.artifact,
+            },
+            "cnc_foam": {
+                "path": gcode_path,
+                "format": intents.cnc_foam.format,
+                "tolerance": intents.cnc_foam.tolerance,
+                "artifact": intents.cnc_foam.artifact,
+                "kerf_offset": kerf,
+            },
+        }
 
 
 class CanardGenerator(WingGenerator):
@@ -913,3 +963,39 @@ class StrakeGenerator(AircraftComponent):
             )
             return (total_cells * cell_volume_in3) / 231.0  # Convert to gallons
         return 0.0
+
+    def manufacturing_plan(self, output_path: Path) -> Dict[str, Any]:
+        """Generate fuselage STEP/STL models and DXF panel templates."""
+        output_path.mkdir(parents=True, exist_ok=True)
+        intents = config.manufacturing.component_intents.get("fuselage")
+
+        step_path = self.export_step(output_path)
+        stl_path = self.export_stl(output_path, tolerance=intents.printable_jigs.tolerance)
+        dxf_path = self.export_dxf(output_path)
+
+        return {
+            "cad_step": {
+                "path": step_path,
+                "format": "STEP",
+                "tolerance": None,
+                "artifact": f"{self.name}_solid",
+            },
+            "printable_jigs": {
+                "path": stl_path,
+                "format": intents.printable_jigs.format,
+                "tolerance": intents.printable_jigs.tolerance,
+                "artifact": intents.printable_jigs.artifact,
+            },
+            "sheet_templates": {
+                "path": dxf_path,
+                "format": intents.sheet_templates.format,
+                "tolerance": intents.sheet_templates.tolerance,
+                "artifact": intents.sheet_templates.artifact,
+            },
+            "cnc_foam": {
+                "path": dxf_path,
+                "format": intents.cnc_foam.format,
+                "tolerance": intents.cnc_foam.tolerance,
+                "artifact": intents.cnc_foam.artifact,
+            },
+        }

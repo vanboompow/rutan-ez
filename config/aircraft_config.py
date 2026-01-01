@@ -206,6 +206,25 @@ class MaterialParams:
 
 
 @dataclass
+class ManufacturingIntent:
+    """Describes a manufacturing artifact and its expected fidelity."""
+
+    artifact: str
+    format: str
+    tolerance: float
+    description: str = ""
+
+
+@dataclass
+class ComponentManufacturingIntent:
+    """Per-component manufacturing outputs for CAM and templates."""
+
+    printable_jigs: ManufacturingIntent
+    cnc_foam: ManufacturingIntent
+    sheet_templates: ManufacturingIntent
+
+
+@dataclass
 class ManufacturingParams:
     """CNC and hot-wire cutting parameters."""
 
@@ -229,6 +248,92 @@ class ManufacturingParams:
     default_dogbone_radius: float = 0.0625
     default_fillet_radius: float = 0.125
     engraving_depth: float = 0.02
+
+    # === FABRICATION INTENT ===
+    component_intents: Dict[str, ComponentManufacturingIntent] = field(
+        default_factory=lambda: {
+            "wing": ComponentManufacturingIntent(
+                printable_jigs=ManufacturingIntent(
+                    artifact="wing_alignment_jig",
+                    format="STL",
+                    tolerance=0.01,
+                    description="3D printed tip/rib fixtures to hold foam cores",
+                ),
+                cnc_foam=ManufacturingIntent(
+                    artifact="wing_foam_core",
+                    format="GCODE",
+                    tolerance=0.02,
+                    description="4-axis hot-wire toolpath with kerf offsets",
+                ),
+                sheet_templates=ManufacturingIntent(
+                    artifact="wing_root_tip_templates",
+                    format="DXF",
+                    tolerance=0.01,
+                    description="Laser or waterjet templates for foam blanks",
+                ),
+            ),
+            "canard": ComponentManufacturingIntent(
+                printable_jigs=ManufacturingIntent(
+                    artifact="canard_alignment_jig",
+                    format="STL",
+                    tolerance=0.01,
+                    description="Roncz canard washout and alignment fixtures",
+                ),
+                cnc_foam=ManufacturingIntent(
+                    artifact="canard_foam_core",
+                    format="GCODE",
+                    tolerance=0.02,
+                    description="Hot-wire toolpath honoring Roncz airfoil",
+                ),
+                sheet_templates=ManufacturingIntent(
+                    artifact="canard_root_tip_templates",
+                    format="DXF",
+                    tolerance=0.01,
+                    description="Templates for canard foam blocks",
+                ),
+            ),
+            "bulkhead": ComponentManufacturingIntent(
+                printable_jigs=ManufacturingIntent(
+                    artifact="bulkhead_jig",
+                    format="STL",
+                    tolerance=0.01,
+                    description="Bonding jigs to hold bulkheads square",
+                ),
+                cnc_foam=ManufacturingIntent(
+                    artifact="bulkhead_blank",
+                    format="DXF",
+                    tolerance=0.02,
+                    description="Router-ready outlines for foam or plywood blanks",
+                ),
+                sheet_templates=ManufacturingIntent(
+                    artifact="bulkhead_templates",
+                    format="DXF",
+                    tolerance=0.01,
+                    description="Full-size bulkhead profiles for tracing",
+                ),
+            ),
+            "fuselage": ComponentManufacturingIntent(
+                printable_jigs=ManufacturingIntent(
+                    artifact="fuselage_assembly_jig",
+                    format="STL",
+                    tolerance=0.02,
+                    description="3D printed pads/locators for longerons and bulkheads",
+                ),
+                cnc_foam=ManufacturingIntent(
+                    artifact="fuselage_shell",
+                    format="DXF",
+                    tolerance=0.03,
+                    description="Panel nest files for CNC-routed side and bottom panels",
+                ),
+                sheet_templates=ManufacturingIntent(
+                    artifact="fuselage_panel_templates",
+                    format="DXF",
+                    tolerance=0.02,
+                    description="Printable side/bottom templates for manual cutting",
+                ),
+            ),
+        }
+    )
 
     @property
     def kerf_compensation(self) -> Dict[FoamType, float]:
