@@ -164,7 +164,9 @@ class FoamCore(AircraftComponent):
         self,
         output_path: Path,
         kerf_offset: float = 0.045,
-        feed_rate: float = 4.0
+        feed_rate: float = 4.0,
+        lead_distance: float = 0.5,
+        feed_schedule: Optional[Dict[float, float]] = None,
     ) -> Path:
         """
         Generate 4-axis hot-wire G-code for CNC foam cutting.
@@ -184,7 +186,11 @@ class FoamCore(AircraftComponent):
             root_profile=self.get_root_profile(),
             tip_profile=self.get_tip_profile(),
             kerf_offset=kerf_offset,
-            feed_rate=feed_rate
+            feed_rate=feed_rate,
+            lead_distance=lead_distance,
+            feed_schedule=sorted(
+                feed_schedule.items(), key=lambda kv: kv[0]
+            ) if feed_schedule else None,
         )
         return writer.write(output_path / f"{self.name}.tap")
 

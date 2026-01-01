@@ -120,6 +120,56 @@ def generate_compliance_report() -> None:
     print(f"  JSON data written to: {json_file}")
 
 
+def export_foam_gcode() -> None:
+    """Batch-generate foam core hot-wire G-code."""
+    from core.structures import CanardGenerator, WingGenerator
+    from core.aerodynamics import airfoil_factory
+
+    print("\n--- Exporting Foam Core G-code ---")
+
+    manufacturing = config.manufacturing
+    kerf_map = manufacturing.kerf_compensation
+    wing_kerf = kerf_map.get(
+        config.materials.wing_core_foam, manufacturing.kerf_styrofoam
+    )
+
+    gcode_dir = project_root / "output" / "gcode"
+    gcode_dir.mkdir(parents=True, exist_ok=True)
+
+    components = []
+
+    # Canard (Roncz-mandated)
+    components.append((CanardGenerator(), wing_kerf))
+
+    # Main wing
+    wing_airfoil = airfoil_factory.get_wing_airfoil(apply_reflex=True)
+    wing = WingGenerator(
+        name="main_wing",
+        root_airfoil=wing_airfoil,
+        tip_airfoil=wing_airfoil,
+        span=config.geometry.wing_span,
+        root_chord=config.geometry.wing_root_chord,
+        tip_chord=config.geometry.wing_tip_chord,
+        sweep_angle=config.geometry.wing_sweep_le,
+        dihedral_angle=config.geometry.wing_dihedral,
+        washout=config.geometry.wing_washout,
+        description="Long-EZ main wing with Eppler 1230 modified",
+    )
+    components.append((wing, wing_kerf))
+
+    for component, kerf in components:
+        print(f"\nComponent: {component.name}")
+        try:
+            tap_file = component.export_gcode(
+                gcode_dir,
+                kerf_offset=kerf,
+                feed_rate=manufacturing.feed_rate_default,
+            )
+            print(f"  Wrote {tap_file.relative_to(project_root)}")
+        except Exception as e:
+            print(f"  Error exporting {component.name}: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Open-EZ Parametric Design Environment",
@@ -158,6 +208,11 @@ For more information, see README.md
         "--compliance",
         action="store_true",
         help="Generate FAA compliance report"
+    )
+    parser.add_argument(
+        "--export-foam-gcode",
+        action="store_true",
+        help="Export hot-wire G-code for foam cores"
     )
     parser.add_argument(
         "--summary",
@@ -203,6 +258,9 @@ For more information, see README.md
 
     if args.compliance:
         generate_compliance_report()
+
+    if args.export_foam_gcode:
+        export_foam_gcode()
 
     print("\n" + "=" * 60)
     print("Done.")
