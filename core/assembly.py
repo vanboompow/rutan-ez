@@ -7,7 +7,7 @@ Handles positioning, intersection checks, and full-aircraft exports.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict
 import cadquery as cq
 
 from .base import AircraftComponent

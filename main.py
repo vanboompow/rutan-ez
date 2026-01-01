@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Open-EZ PDE: Main Entry Point (Upgraded)
 ========================================
@@ -18,7 +19,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from config import config
-from core.structures import CanardGenerator, WingGenerator, Fuselage
+from core.structures import CanardGenerator, WingGenerator
 from core.analysis import physics, VSPBridge
 from core.manufacturing import JigFactory
 
@@ -81,7 +82,7 @@ def run_analysis():
     vsp_dir = project_root / "output" / "VSP"
     vsp_dir.mkdir(parents=True, exist_ok=True)
     VSPBridge.export_vsp_script(vsp_dir / "model.vspscript")
-    print(f"  OpenVSP script exported to output/VSP/")
+    print("  OpenVSP script exported to output/VSP/")
 
 
 def generate_manufacturing():
@@ -123,7 +124,7 @@ def generate_canard() -> None:
         canard.export_step(step_dir)
         canard.export_stl(stl_dir)
         canard.export_dxf(dxf_dir)
-        print(f"  Canard core exported to output/")
+        print("  Canard core exported to output/")
     except Exception as e:
         print(f"  Error generating canard: {e}")
 
@@ -156,7 +157,7 @@ def generate_wing() -> None:
         wing.generate_geometry()
         wing.cut_spar_trough()
         wing.export_step(step_dir)
-        print(f"  Main wing exported to output/STEP/")
+        print("  Main wing exported to output/STEP/")
     except Exception as e:
         print(f"  Error generating wing: {e}")
 

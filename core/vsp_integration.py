@@ -8,7 +8,7 @@ Provides parametric geometry mapping and analysis execution.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, Optional, Union, Tuple
 import json
 
 from config import config

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict
 
 from config import config
@@ -48,10 +47,10 @@ class BeamFEAAdapter:
 
         L = span_in
         E = self.section.modulus_psi
-        I = self.section.inertia
+        inertia = self.section.inertia
 
-        tip_deflection = (tip_load_lbf * (L ** 3)) / (3 * E * I)
-        max_stress = (tip_load_lbf * L * (self.section.height_in / 2)) / I
+        tip_deflection = (tip_load_lbf * (L ** 3)) / (3 * E * inertia)
+        max_stress = (tip_load_lbf * L * (self.section.height_in / 2)) / inertia
         return BeamResult(tip_deflection_in=tip_deflection, max_stress_psi=max_stress)
 
     def nominal_spar_check(self) -> Dict[str, float]:

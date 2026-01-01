@@ -13,7 +13,6 @@ The original GU25-5(11)8 caused dangerous pitch-down in rain.
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
-import math
 
 
 class AirfoilType(Enum):

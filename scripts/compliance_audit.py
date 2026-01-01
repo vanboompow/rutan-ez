@@ -24,7 +24,7 @@ def run_compliance_audit():
     # 2. Check status
     total = compliance_tracker.total_credit
     print(f"   ✅ Current Builder Credit: {total:.1%}")
-    print(f"   ✅ Threshold: 51.0%")
+    print("   ✅ Threshold: 51.0%")
     
     if compliance_tracker.is_compliant:
         print("   ✅ COMPLIANCE STATUS: AMATEUR-BUILT ELIGIBLE")

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
+
 """
 Open-EZ PDE: Roncz Canard Core Generator
 ========================================
@@ -24,7 +26,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from config import config
-from core.aerodynamics import AirfoilFactory
 from core.structures import CanardGenerator
 
 
@@ -68,7 +69,7 @@ def main():
     # Generate geometry
     print("\n[2/4] Generating Lofted Geometry...")
     try:
-        geometry = canard.generate_geometry()
+        canard.generate_geometry()
         print("      Loft successful.")
     except Exception as e:
         print(f"      ERROR: Geometry generation failed: {e}")

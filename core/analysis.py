@@ -11,12 +11,19 @@ Key Metrics:
 - Canard Stall Priority: Canard must stall before wing for safety
 """
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import json
+import logging
 import math
 from config import config
+from .vsp_integration import vsp_bridge
+
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 @dataclass
@@ -188,8 +195,6 @@ class PhysicsEngine:
         ar_wing = self.geo.wing_aspect_ratio
 
         # Calculate canard aspect ratio
-        canard_semi_span = self.geo.canard_span / 2
-        canard_avg_chord = (self.geo.canard_root_chord + self.geo.canard_tip_chord) / 2
         ar_canard = (self.geo.canard_span / 12)**2 / s_canard  # span in feet
 
         # Lift curve slopes (per radian)
@@ -269,11 +274,6 @@ class PhysicsEngine:
         Returns:
             Tuple of (is_safe, message)
         """
-        # Wing loading comparison (simplified)
-        # For safety, canard should be more heavily loaded
-        wing_loading = self.geo.wing_area  # Placeholder
-        canard_loading = self.geo.canard_area
-
         # Area ratio check
         area_ratio = self.geo.canard_area / self.geo.wing_area
 
@@ -346,10 +346,6 @@ class VSPBridge:
         3D model for aerodynamic analysis.
         """
         geo = config.geometry
-
-        # Calculate derived values
-        wing_taper = geo.wing_tip_chord / geo.wing_root_chord
-        canard_taper = geo.canard_tip_chord / geo.canard_root_chord
 
         script = [
             "//=========================================",
@@ -476,19 +472,9 @@ class VSPBridge:
 # Module Instance
 physics = PhysicsEngine()
 
-
 # =============================================================================
 # OpenVSP Runner - Executes real OpenVSP or surrogate aerodynamics
 # =============================================================================
-
-from datetime import datetime
-from dataclasses import asdict
-from typing import Any
-from .vsp_integration import vsp_bridge
-import logging
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 
 @dataclass

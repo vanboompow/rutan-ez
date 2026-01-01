@@ -14,13 +14,13 @@ All dimensions derive from config/aircraft_config.py.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 import numpy as np
 import cadquery as cq
 
 from config import config
 from .base import AircraftComponent, FoamCore
-from .aerodynamics import Airfoil, AirfoilFactory, airfoil_factory
+from .aerodynamics import Airfoil, AirfoilFactory
 from .manufacturing import JigFactory  # NEW Import
 
 
@@ -179,9 +179,6 @@ class WingGenerator(FoamCore):
             raise ValueError("Need at least 2 stations for lofting")
 
         # Build loft using CadQuery
-        # Start with first wire as a workplane reference
-        result = cq.Workplane("XY")
-
         # Create faces from wires
         faces = [cq.Face.makeFromWires(w) for w in wires]
 

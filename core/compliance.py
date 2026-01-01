@@ -254,7 +254,7 @@ Aircraft: {config.project_name} ({config.baseline})
         for task in completed:
             report += f"| {task.description} | {task.category.value} | {task.method.value} | {task.builder_credit:.1%} |\n"
 
-        report += f"""
+        report += """
 ---
 
 ## Remaining Tasks
@@ -265,7 +265,7 @@ Aircraft: {config.project_name} ({config.baseline})
         for task in incomplete:
             report += f"| {task.description} | {task.category.value} | {task.base_credit:.1%} |\n"
 
-        report += f"""
+        report += """
 ---
 
 ## Notes

@@ -1,11 +1,9 @@
-import shutil
 from pathlib import Path
 from datetime import datetime
 
 from core.assembly import AircraftAssembly
 from core.manufacturing import GCodeEngine, JigFactory
 from core.compliance import compliance_tracker, ManufacturingMethod
-from core.analysis import openvsp_runner
 
 def produce_final_package():
     print("💎 Final Prototype Production Sprint Starting...")
@@ -77,11 +75,11 @@ def produce_final_package():
     
     # Summary File
     with open(package_dir / "README.txt", "w") as f:
-        f.write(f"Open-EZ PDE Final Prototype Package\n")
+        f.write("Open-EZ PDE Final Prototype Package\n")
         f.write(f"Timestamp: {timestamp}\n")
-        f.write(f"Version: 0.1.0\n\n")
-        f.write(f"This package contains the complete digital definition for producing\n")
-        f.write(f"the Open-EZ airframe components using Plans-as-Code methodology.\n")
+        f.write("Version: 0.1.0\n\n")
+        f.write("This package contains the complete digital definition for producing\n")
+        f.write("the Open-EZ airframe components using Plans-as-Code methodology.\n")
 
     print(f"\n🎉 SUCCESS: Final package is ready at: {package_dir}")
     return package_dir

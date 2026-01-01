@@ -23,7 +23,7 @@ def test_full_assembly():
          print(f"   ⚠️ WARNING: CG ({props['cg_x_fs']:.2f}) looks suspicious. Check FS positions.")
 
     print("   Building assembly hierarchy...")
-    hierarchical_asm = assembly.build_assembly()
+    assembly.build_assembly()
     
     print("   Exporting assembly artifacts...")
     output_dir = Path("output/assembly_test")

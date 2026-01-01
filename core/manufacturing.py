@@ -8,19 +8,22 @@ Handles the translation of abstract geometry into machine instructions.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, TYPE_CHECKING
-import numpy as np
-import cadquery as cq
+from typing import Optional, TYPE_CHECKING, Union
 import logging
-logger = logging.getLogger(__name__)
+
+import cadquery as cq
+import numpy as np
+
+from config import config
+from .base import AircraftComponent
 
 if TYPE_CHECKING:
     from .base import FoamCore
 
-from .base import AircraftComponent
-from config import config
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

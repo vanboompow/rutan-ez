@@ -10,7 +10,7 @@ SAFETY: Defaults to Roncz R1145MS for canard applications.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Tuple, Optional
 import numpy as np
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter

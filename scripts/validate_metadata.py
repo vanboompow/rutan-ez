@@ -2,6 +2,7 @@
 
 Designed for CI to refuse artifacts lacking provenance.
 """
+# ruff: noqa: E402
 from __future__ import annotations
 
 import argparse
