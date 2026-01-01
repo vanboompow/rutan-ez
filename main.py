@@ -43,7 +43,7 @@ def validate_config() -> bool:
 
 def generate_canard() -> None:
     """Generate canard foam core."""
-    from core.structures import CanardGenerator
+    from core.wing_generator import CanardGenerator
 
     print("\n--- Generating Canard ---")
     canard = CanardGenerator()
@@ -67,8 +67,8 @@ def generate_canard() -> None:
 
 def generate_wing() -> None:
     """Generate main wing foam cores."""
-    from core.structures import WingGenerator
-    from core.aerodynamics import airfoil_factory
+    from core.airfoil_factory import airfoil_factory
+    from core.wing_generator import WingGenerator
 
     print("\n--- Generating Main Wing ---")
 
