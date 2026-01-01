@@ -41,6 +41,32 @@ def validate_config() -> bool:
     return True
 
 
+def validate_physics() -> bool:
+    """Run lightweight physics regressions against stored baselines."""
+
+    from core.simulation.regression import RegressionRunner
+
+    print("\n--- Validating Physics Models ---")
+    report_dir = project_root / "output" / "reports"
+    baseline = project_root / "tests" / "snapshots" / "physics_baseline.json"
+
+    runner = RegressionRunner()
+    passed, current, failures = runner.compare_to_baseline(
+        baseline_path=baseline, report_dir=report_dir
+    )
+
+    if passed:
+        print("  Physics regressions PASSED")
+    else:
+        print("  Physics regressions FAILED:")
+        for failure in failures:
+            print(f"   - {failure}")
+
+    polars_path = (project_root / "output" / "reports" / "vspaero_polars.json")
+    runner.aero.serialize_polars(target=polars_path)
+    return passed
+
+
 def generate_canard() -> None:
     """Generate canard foam core."""
     from core.structures import CanardGenerator
@@ -84,7 +110,7 @@ def generate_wing() -> None:
         sweep_angle=config.geometry.wing_sweep_le,
         dihedral_angle=config.geometry.wing_dihedral,
         washout=config.geometry.wing_washout,
-        description="Long-EZ main wing with Eppler 1230 modified"
+        description="Long-EZ main wing with Eppler 1230 modified",
     )
 
     step_dir = project_root / "output" / "STEP"
@@ -127,42 +153,48 @@ def main():
         epilog="""
 Examples:
     python main.py --validate         Check configuration
+    python main.py --validate-physics Run aerodynamic/structural regression suite
     python main.py --generate-all     Generate all components
     python main.py --canard           Generate canard only
 
 For more information, see README.md
-        """
+        """,
     )
 
     parser.add_argument(
         "--generate-all",
         action="store_true",
-        help="Generate all aircraft components"
+        help="Generate all aircraft components",
     )
     parser.add_argument(
         "--canard",
         action="store_true",
-        help="Generate canard foam core only"
+        help="Generate canard foam core only",
     )
     parser.add_argument(
         "--wing",
         action="store_true",
-        help="Generate main wing only"
+        help="Generate main wing only",
     )
     parser.add_argument(
         "--validate",
         action="store_true",
-        help="Validate configuration only"
+        help="Validate configuration only",
+    )
+    parser.add_argument(
+        "--validate-physics",
+        action="store_true",
+        help="Validate aerodynamic/structural regressions",
     )
     parser.add_argument(
         "--compliance",
         action="store_true",
-        help="Generate FAA compliance report"
+        help="Generate FAA compliance report",
     )
     parser.add_argument(
         "--summary",
         action="store_true",
-        help="Show configuration summary"
+        help="Show configuration summary",
     )
 
     args = parser.parse_args()
@@ -184,6 +216,9 @@ For more information, see README.md
 
     if args.validate:
         return 0 if validate_config() else 1
+
+    if args.validate_physics:
+        return 0 if validate_physics() else 1
 
     # Validate before generating
     if not validate_config():
