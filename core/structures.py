@@ -242,7 +242,8 @@ class WingGenerator(FoamCore):
 
         # Cut from both upper and lower surfaces
         # (simplified - real implementation would follow airfoil surface)
-        self._geometry = self._geometry.cut(trough)
+        if self._geometry is not None:
+            self._geometry = self._geometry.cut(trough)
 
         self.add_metadata("spar_trough_depth", depth)
         self.add_metadata("spar_trough_width", width)

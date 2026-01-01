@@ -439,8 +439,9 @@ class JigFactory:
         # Get geometry from component if available
         try:
             wing_geom = wing_component.geometry
-            has_geometry = True
+            has_geometry = wing_geom is not None
         except (ValueError, AttributeError):
+            wing_geom = None
             has_geometry = False
 
         # Base block dimensions
@@ -451,7 +452,7 @@ class JigFactory:
         # Create base block
         cradle = cq.Workplane("XY").box(length, width, height, centered=False)
 
-        if has_geometry:
+        if has_geometry and wing_geom is not None:
             # Slice wing at station to get profile
             try:
                 # Create slicing plane at the butt line
@@ -586,7 +587,7 @@ class JigFactory:
     def generate_drill_guide(
         hole_diameter: float,
         guide_length: float = 1.5,
-        flange_diameter: float = None,
+        flange_diameter: Optional[float] = None,
         flange_thickness: float = 0.25,
     ) -> cq.Workplane:
         """

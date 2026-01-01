@@ -735,7 +735,7 @@ class OpenVSPRunner:
         manifest_path.write_text(json.dumps(payload, indent=2))
 
         return StructuralMeshManifest(
-            mesh_directory=mesh_dir, surfaces=surfaces, notes=payload["notes"]
+            mesh_directory=mesh_dir, surfaces=surfaces, notes=str(payload["notes"])
         )
 
     @staticmethod

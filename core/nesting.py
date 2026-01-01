@@ -203,7 +203,7 @@ class NestingPlanner:
                 self._add_label(msp, placement, engraving_depth)
 
                 cut_steps = (
-                    laminate_cut_orders.get(placement.outline.laminate)
+                    laminate_cut_orders.get(placement.outline.laminate or "")
                     if laminate_cut_orders
                     else None
                 )
