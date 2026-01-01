@@ -12,7 +12,7 @@ The original GU25-5(11)8 caused dangerous pitch-down in rain.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import math
 
 
@@ -28,6 +28,38 @@ class FoamType(Enum):
     STYROFOAM_BLUE = "styrofoam_blue"     # 2 lb/ft³ - Standard wing cores
     URETHANE_2LB = "urethane_2lb"         # 2 lb/ft³ - Higher temp resistance
     DIVINYCELL_H45 = "divinycell_h45"     # Structural foam - fuselage
+
+
+@dataclass
+class Ply:
+    """Single composite ply definition."""
+
+    material: str
+    orientation: float
+    thickness: Optional[float] = None
+
+
+@dataclass
+class LaminateDefinition:
+    """Stack of plies used for layups and manufacturing prep."""
+
+    name: str
+    plies: List[Ply] = field(default_factory=list)
+    notes: str = ""
+
+    def total_thickness(self, ply_lookup: Dict[str, float]) -> float:
+        """Compute total laminate thickness using a ply thickness lookup."""
+        thickness = 0.0
+        for ply in self.plies:
+            base = ply.thickness
+            if base is None:
+                base = ply_lookup.get(ply.material.lower(), 0.0)
+            thickness += base
+        return thickness
+
+    def cut_order_steps(self) -> List[str]:
+        """Describe recommended CAM steps for this laminate."""
+        return ["engrave_labels", "pocket_features", "profile_cut"]
 
 
 @dataclass
@@ -107,11 +139,42 @@ class MaterialParams:
     wing_core_foam: FoamType = FoamType.STYROFOAM_BLUE
     fuselage_foam: FoamType = FoamType.URETHANE_2LB
     foam_core_thickness: float = 0.5      # PVC foam shell thickness
+    laminates: Dict[str, LaminateDefinition] = field(
+        default_factory=lambda: {
+            "wing_skin": LaminateDefinition(
+                name="wing_skin",
+                plies=[
+                    Ply(material="bid", orientation=45.0),
+                    Ply(material="bid", orientation=-45.0),
+                    Ply(material="uni", orientation=0.0),
+                    Ply(material="bid", orientation=45.0),
+                ],
+                notes="Baseline Long-EZ wing skin schedule",
+            ),
+            "canard_skin": LaminateDefinition(
+                name="canard_skin",
+                plies=[
+                    Ply(material="bid", orientation=30.0),
+                    Ply(material="bid", orientation=-30.0),
+                    Ply(material="bid", orientation=45.0),
+                ],
+                notes="Roncz canard surface layup",
+            ),
+        }
+    )
 
     @property
     def spar_trough_depth(self) -> float:
         """Spar cap trough depth = plies × thickness."""
         return self.spar_cap_plies * self.uni_ply_thickness
+
+    @property
+    def ply_thickness_lookup(self) -> Dict[str, float]:
+        """Map laminate material names to nominal ply thickness."""
+        return {
+            "bid": self.bid_ply_thickness,
+            "uni": self.uni_ply_thickness,
+        }
 
 
 @dataclass
@@ -127,6 +190,17 @@ class ManufacturingParams:
     # === KERF COMPENSATION ===
     kerf_styrofoam: float = 0.045         # Material removed (inches)
     kerf_urethane: float = 0.035          # Material removed (inches)
+
+    # === NESTING / SHEET STOCK ===
+    stock_sheets: List[Tuple[float, float]] = field(
+        default_factory=lambda: [
+            (24.0, 48.0),  # Typical foam block face
+            (48.0, 96.0),  # Full plywood sheet
+        ]
+    )
+    default_dogbone_radius: float = 0.0625
+    default_fillet_radius: float = 0.125
+    engraving_depth: float = 0.02
 
     @property
     def kerf_compensation(self) -> Dict[FoamType, float]:
@@ -218,6 +292,17 @@ class AircraftConfig:
                 "below FAA 51% requirement."
             )
 
+        # Laminate sanity checks
+        for key, laminate in self.materials.laminates.items():
+            if not laminate.plies:
+                errors.append(f"Laminate '{key}' has no ply definitions")
+            thickness = laminate.total_thickness(self.materials.ply_thickness_lookup)
+            if thickness <= 0:
+                errors.append(f"Laminate '{key}' resolves to zero thickness")
+
+        if not self.manufacturing.stock_sheets:
+            errors.append("No stock sheet sizes defined for nesting")
+
         # STABILITY CHECK: Canard must stall before wing
         # (simplified check - full analysis requires OpenVSP)
         canard_loading = 1.0  # placeholder
@@ -263,6 +348,23 @@ COMPLIANCE
 Builder Credits: {self.compliance.total_builder_credit:.1%}
 FAA 51% Status: {'PASS' if self.compliance.total_builder_credit >= 0.51 else 'FAIL'}
 """
+
+    def laminate_manifest(self) -> List[Dict[str, str]]:
+        """Flatten laminate definitions for downstream nesting manifests."""
+        manifest: List[Dict[str, str]] = []
+        for key, laminate in self.materials.laminates.items():
+            for idx, ply in enumerate(laminate.plies, start=1):
+                manifest.append(
+                    {
+                        "laminate": key,
+                        "ply_index": str(idx),
+                        "orientation": f"{ply.orientation:.1f}",
+                        "material": ply.material,
+                        "thickness": f"{(ply.thickness or self.materials.ply_thickness_lookup.get(ply.material.lower(), 0.0)):.4f}",
+                        "notes": laminate.notes,
+                    }
+                )
+        return manifest
 
 
 # Singleton instance - import this throughout the project

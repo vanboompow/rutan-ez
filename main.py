@@ -120,6 +120,50 @@ def generate_compliance_report() -> None:
     print(f"  JSON data written to: {json_file}")
 
 
+def nest_sheets() -> None:
+    """Nest generated DXFs onto stock sheet sizes."""
+    from core.nesting import NestingPlanner
+
+    print("\n--- Nesting DXF Sheets ---")
+    dxf_dir = project_root / "output" / "DXF"
+    nested_dir = project_root / "output" / "nested"
+
+    if not dxf_dir.exists():
+        print("  No DXF directory found. Run geometry exports first.")
+        return
+
+    planner = NestingPlanner(
+        stock_sheets=config.manufacturing.stock_sheets,
+        margin=0.25,
+        spacing=0.125,
+        dogbone_radius=config.manufacturing.default_dogbone_radius,
+        fillet_radius=config.manufacturing.default_fillet_radius,
+    )
+
+    laminate_keys = list(config.materials.laminates.keys())
+    default_laminate = laminate_keys[0] if laminate_keys else None
+
+    outlines = planner.load_outlines(dxf_dir, laminate=default_laminate)
+    if not outlines:
+        print("  No DXF outlines found to nest.")
+        return
+
+    laminate_orders = {
+        name: lam.cut_order_steps() for name, lam in config.materials.laminates.items()
+    }
+
+    placements = planner.pack(outlines)
+    manifest = planner.export(
+        placements,
+        nested_dir,
+        engraving_depth=config.manufacturing.engraving_depth,
+        laminate_cut_orders=laminate_orders,
+    )
+
+    print(f"  Nested sheets written to: {nested_dir}")
+    print(f"  Manifest written to: {manifest}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Open-EZ Parametric Design Environment",
@@ -164,6 +208,11 @@ For more information, see README.md
         action="store_true",
         help="Show configuration summary"
     )
+    parser.add_argument(
+        "--nest-sheets",
+        action="store_true",
+        help="Nest DXF outlines onto stock sheets and emit manifests"
+    )
 
     args = parser.parse_args()
 
@@ -203,6 +252,9 @@ For more information, see README.md
 
     if args.compliance:
         generate_compliance_report()
+
+    if args.nest_sheets:
+        nest_sheets()
 
     print("\n" + "=" * 60)
     print("Done.")
