@@ -106,7 +106,19 @@ class WingGenerator(FoamCore):
             chord = self.root_chord + eta * (self.tip_chord - self.root_chord)
 
             # Sweep offset (measured at leading edge)
-            x_offset = butt_line * np.tan(np.radians(self.sweep_angle))
+            if isinstance(self.sweep_angle, (list, tuple)):
+                # Calculate cumulative offset from piecewise segment sweeps
+                if i == 0:
+                    x_offset = 0.0
+                else:
+                    # Sum up tangent of previous segments
+                    x_offset = 0.0
+                    for j in range(i):
+                        seg_span = semi_span / (self.n_stations - 1)
+                        seg_sweep = self.sweep_angle[min(j, len(self.sweep_angle)-1)]
+                        x_offset += seg_span * np.tan(np.radians(seg_sweep))
+            else:
+                x_offset = butt_line * np.tan(np.radians(self.sweep_angle))
 
             # Dihedral offset
             z_offset = butt_line * np.tan(np.radians(self.dihedral_angle))
@@ -237,6 +249,7 @@ class WingGenerator(FoamCore):
 
     def export_dxf(self, output_path: Path) -> Path:
         """Export root and tip templates as DXF."""
+        output_path.mkdir(parents=True, exist_ok=True)
         # Export root profile
         root_wire = self.get_root_profile()
         root_path = output_path / f"{self.name}_root.dxf"
@@ -439,6 +452,37 @@ class CanardGenerator(WingGenerator):
         self.add_metadata("safety_mandate", "Rain-safe canard per CP updates")
 
 
+class MainWingGenerator(WingGenerator):
+    """
+    Specialized generator for the main wing.
+    
+    Uses defaults from config.geometry and config.airfoils.
+    """
+
+    def __init__(
+        self,
+        name: str = "main_wing",
+        description: str = "Eppler 1230 Modified wing foam core"
+    ):
+        factory = AirfoilFactory()
+        root_af = factory.load(config.airfoils.wing_root)
+        tip_af = factory.load(config.airfoils.wing_tip)
+
+        super().__init__(
+            name=name,
+            root_airfoil=root_af,
+            tip_airfoil=tip_af,
+            span=config.geometry.wing_span,
+            root_chord=config.geometry.wing_root_chord,
+            tip_chord=config.geometry.wing_tip_chord,
+            sweep_angle=config.geometry.wing_sweep_le,
+            dihedral_angle=config.geometry.wing_dihedral,
+            washout=config.geometry.wing_washout,
+            n_stations=10,
+            description=description
+        )
+
+
 @dataclass
 class BulkheadProfile:
     """Fuselage cross-section at a station."""
@@ -518,19 +562,19 @@ class Fuselage(AircraftComponent):
         h = profile.height / 2
 
         if w < 0.1 or h < 0.1:
-            # Near-point for nose
-            return cq.Wire.makeCircle(0.1, cq.Vector(0, 0, profile.station))
+            # Near-point for nose - circle in YZ plane
+            return cq.Wire.makeCircle(0.1, cq.Vector(profile.station, 0, 0), cq.Vector(1, 0, 0))
 
-        # Create ellipse
+        # Create ellipse in YZ plane
         ellipse = (
-            cq.Workplane("XY")
+            cq.Workplane("YZ")
             .center(0, profile.floor_height + h)
-            .ellipse(w, h)
+            .ellipse(h, w)  # h is Z (vertical), w is Y (lateral)
             .wire()
         )
 
-        # Move to correct station
-        return ellipse.val().moved(cq.Location(cq.Vector(0, 0, profile.station)))
+        # Move to correct station along X axis
+        return ellipse.val().moved(cq.Location(cq.Vector(profile.station, 0, 0)))
 
     def generate_geometry(self) -> cq.Workplane:
         """
