@@ -48,7 +48,9 @@ def _run_openvsp_probe(allow_missing: bool) -> None:
         raise RuntimeError(f"OpenVSP probe failed: {exc}") from exc
 
 
-def _export_component(component: FoamCore, out_root: Path, fast: bool) -> Dict[str, Path]:
+def _export_component(
+    component: FoamCore, out_root: Path, fast: bool
+) -> Dict[str, Path]:
     step_dir = out_root / "STEP"
     stl_dir = out_root / "STL"
     dxf_dir = out_root / "DXF"
@@ -70,7 +72,9 @@ def _export_component(component: FoamCore, out_root: Path, fast: bool) -> Dict[s
     artifacts["dxf"] = component.export_dxf(dxf_dir)
     artifacts["gcode"] = component.export_gcode(
         gcode_dir,
-        kerf_offset=config.manufacturing.kerf_compensation[config.materials.wing_core_foam],
+        kerf_offset=config.manufacturing.kerf_compensation[
+            config.materials.wing_core_foam
+        ],
         feed_rate=config.manufacturing.feed_rate_default,
     )
 
@@ -98,7 +102,7 @@ def run_smoke(
         sweep_angle=config.geometry.wing_sweep_le,
         dihedral_angle=config.geometry.wing_dihedral,
         washout=config.geometry.wing_washout,
-        description="Smoke test wing"
+        description="Smoke test wing",
     )
 
     canard = CanardGenerator()

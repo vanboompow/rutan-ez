@@ -8,49 +8,54 @@ Handles the translation of abstract geometry into machine instructions.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 import numpy as np
 import cadquery as cq
 import logging
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .base import FoamCore
 
-from .base import AircraftComponent
-from config import config
+from .base import AircraftComponent  # noqa: E402
+from config import config  # noqa: E402
 
 
 @dataclass
 class HotWireProcess:
     """Defines the relationship between material and cutting parameters."""
+
     foam_type: str
     wire_temp_f: float
     kerf_in: float
     max_feed_ipm: float
     notes: str = ""
 
+
 @dataclass
 class GCodeConfig:
     """CNC Machine Configuration."""
-    feed_rate: float = 4.0          # Inches per minute
-    safe_height: float = 2.0        # Retract height (Z clearance)
-    block_depth: float = 10.0       # Distance between towers (span direction)
-    wire_kerf: float = 0.045        # Material removal width
-    preheat_time: float = 2.0       # Seconds to wait for wire temp
-    lead_in_distance: float = 1.0   # Entry/exit distance from foam
+
+    feed_rate: float = 4.0  # Inches per minute
+    safe_height: float = 2.0  # Retract height (Z clearance)
+    block_depth: float = 10.0  # Distance between towers (span direction)
+    wire_kerf: float = 0.045  # Material removal width
+    preheat_time: float = 2.0  # Seconds to wait for wire temp
+    lead_in_distance: float = 1.0  # Entry/exit distance from foam
     machine_type: str = "4-axis-hotwire"
-    coord_system: str = "G20"       # Inches
+    coord_system: str = "G20"  # Inches
 
 
 @dataclass
 class CutPath:
     """Represents a synchronized 4-axis cut path."""
+
     root_points: np.ndarray  # Nx2 array of (X, Y) for root side
-    tip_points: np.ndarray   # Nx2 array of (U, V) for tip side
-    feed_rates: np.ndarray   # N-1 array of feed rates between points
+    tip_points: np.ndarray  # Nx2 array of (U, V) for tip side
+    feed_rates: np.ndarray  # N-1 array of feed rates between points
 
     @property
     def num_points(self) -> int:
@@ -77,7 +82,7 @@ class GCodeWriter:
         tip_profile: cq.Wire,
         kerf_offset: float = 0.045,
         feed_rate: float = 4.0,
-        config: Optional[GCodeConfig] = None
+        config: Optional[GCodeConfig] = None,
     ):
         self.root = root_profile
         self.tip = tip_profile
@@ -206,11 +211,7 @@ class GCodeWriter:
 
         return offset_points
 
-    def _sync_profiles(
-        self,
-        pts_root: np.ndarray,
-        pts_tip: np.ndarray
-    ) -> CutPath:
+    def _sync_profiles(self, pts_root: np.ndarray, pts_tip: np.ndarray) -> CutPath:
         """
         Synchronize root and tip profiles by parametric position.
 
@@ -244,7 +245,7 @@ class GCodeWriter:
         return CutPath(
             root_points=pts_root[:n_points],
             tip_points=pts_tip[:n_points],
-            feed_rates=feed_rates
+            feed_rates=feed_rates,
         )
 
     def _find_start_point(self, points: np.ndarray) -> int:
@@ -335,8 +336,10 @@ class GCodeWriter:
         start_tip = cut_path.tip_points[0]
         lead_in = self.config.lead_in_distance
 
-        gcode.append(f"G0 X{start_root[0] + lead_in:.4f} Y{start_root[1]:.4f} "
-                     f"U{start_tip[0] + lead_in:.4f} V{start_tip[1]:.4f}")
+        gcode.append(
+            f"G0 X{start_root[0] + lead_in:.4f} Y{start_root[1]:.4f} "
+            f"U{start_tip[0] + lead_in:.4f} V{start_tip[1]:.4f}"
+        )
 
         # Plunge to cutting height
         gcode.append("G0 Z0 ( Plunge to cut level )")
@@ -360,20 +363,22 @@ class GCodeWriter:
         u, v = cut_path.tip_points[0]
         gcode.append(f"G1 X{x:.4f} Y{y:.4f} U{u:.4f} V{v:.4f} ( Close loop )")
 
-        gcode.extend([
-            "",
-            "( Lead-out )",
-            f"G1 X{x + lead_in:.4f} Y{y:.4f} U{u + lead_in:.4f} V{v:.4f}",
-            "",
-            "( Shutdown )",
-            "M5 ( Heat OFF )",
-            f"G0 Z{self.config.safe_height:.3f} ( Retract )",
-            "G0 X0 Y0 U0 V0 ( Return home )",
-            "M30 ( Program End )",
-            "",
-            f"( Total points: {cut_path.num_points} )",
-            f"( Kerf compensation: {self.kerf:.4f} in )",
-        ])
+        gcode.extend(
+            [
+                "",
+                "( Lead-out )",
+                f"G1 X{x + lead_in:.4f} Y{y:.4f} U{u + lead_in:.4f} V{v:.4f}",
+                "",
+                "( Shutdown )",
+                "M5 ( Heat OFF )",
+                f"G0 Z{self.config.safe_height:.3f} ( Retract )",
+                "G0 X0 Y0 U0 V0 ( Return home )",
+                "M30 ( Program End )",
+                "",
+                f"( Total points: {cut_path.num_points} )",
+                f"( Kerf compensation: {self.kerf:.4f} in )",
+            ]
+        )
 
         # Write file
         output_path = Path(output_path)
@@ -396,11 +401,11 @@ class JigFactory:
     """
 
     # Standard jig parameters
-    CRADLE_WIDTH = 4.0       # Thickness in spanwise direction
-    CRADLE_HEIGHT = 5.0      # Height from table surface
-    CRADLE_LENGTH = 20.0     # Chordwise extent
-    WALL_THICKNESS = 0.25    # Structural wall thickness
-    CLEARANCE = 0.02         # Fit clearance for wing
+    CRADLE_WIDTH = 4.0  # Thickness in spanwise direction
+    CRADLE_HEIGHT = 5.0  # Height from table surface
+    CRADLE_LENGTH = 20.0  # Chordwise extent
+    WALL_THICKNESS = 0.25  # Structural wall thickness
+    CLEARANCE = 0.02  # Fit clearance for wing
 
     @staticmethod
     def generate_incidence_cradle(
@@ -408,7 +413,7 @@ class JigFactory:
         station_bl: float,
         incidence_angle: float,
         cradle_width: float = 4.0,
-        base_height: float = 5.0
+        base_height: float = 5.0,
     ) -> cq.Workplane:
         """
         Create a cradle that conforms to the BOTTOM of the wing
@@ -444,10 +449,7 @@ class JigFactory:
         height = base_height + 3.0  # Extra height for wing contour
 
         # Create base block
-        cradle = (
-            cq.Workplane("XY")
-            .box(length, width, height, centered=False)
-        )
+        cradle = cq.Workplane("XY").box(length, width, height, centered=False)
 
         if has_geometry:
             # Slice wing at station to get profile
@@ -466,7 +468,7 @@ class JigFactory:
                 cutter = offset_section.extrude(width * 2)
 
                 # Position cutter at correct height
-                cutter = cutter.translate((0, -width/2, base_height))
+                cutter = cutter.translate((0, -width / 2, base_height))
 
                 # Cut wing profile from cradle top
                 cradle = cradle.cut(cutter)
@@ -489,8 +491,7 @@ class JigFactory:
             pivot_z = base_height
 
             cradle = (
-                cradle
-                .translate((-pivot_x, 0, -pivot_z))
+                cradle.translate((-pivot_x, 0, -pivot_z))
                 .rotate((0, 0, 0), (0, 1, 0), -incidence_angle)
                 .translate((pivot_x, 0, pivot_z))
             )
@@ -509,7 +510,7 @@ class JigFactory:
         length: float,
         width: float,
         height: float,
-        base_height: float
+        base_height: float,
     ) -> cq.Workplane:
         """Add approximated airfoil contour cut to cradle top."""
         # Create airfoil-shaped cutter based on typical lower surface
@@ -530,21 +531,13 @@ class JigFactory:
         points.append((0, height + 1))
 
         # Create profile and extrude
-        cutter = (
-            cq.Workplane("XZ")
-            .polyline(points)
-            .close()
-            .extrude(width)
-        )
+        cutter = cq.Workplane("XZ").polyline(points).close().extrude(width)
 
         return cradle.cut(cutter)
 
     @staticmethod
     def _add_structural_features(
-        cradle: cq.Workplane,
-        length: float,
-        width: float,
-        height: float
+        cradle: cq.Workplane, length: float, width: float, height: float
     ) -> cq.Workplane:
         """Add lightening pockets and structural ribs."""
         wall = JigFactory.WALL_THICKNESS
@@ -568,10 +561,7 @@ class JigFactory:
 
     @staticmethod
     def _add_alignment_marks(
-        cradle: cq.Workplane,
-        length: float,
-        width: float,
-        station_bl: float
+        cradle: cq.Workplane, length: float, width: float, station_bl: float
     ) -> cq.Workplane:
         """Add centerline and station marks."""
         mark_depth = 0.05
@@ -597,7 +587,7 @@ class JigFactory:
         hole_diameter: float,
         guide_length: float = 1.5,
         flange_diameter: float = None,
-        flange_thickness: float = 0.25
+        flange_thickness: float = 0.25,
     ) -> cq.Workplane:
         """
         Generate a precision drill guide sleeve.
@@ -629,20 +619,13 @@ class JigFactory:
         )
 
         # Cut center hole
-        guide = (
-            guide
-            .faces("<Z")
-            .circle(inner_d / 2)
-            .cutThruAll()
-        )
+        guide = guide.faces("<Z").circle(inner_d / 2).cutThruAll()
 
         return guide
 
     @staticmethod
     def generate_vortilon_template(
-        height: float = 2.5,
-        base_length: float = 3.0,
-        thickness: float = 0.125
+        height: float = 2.5, base_length: float = 3.0, thickness: float = 0.125
     ) -> cq.Workplane:
         """
         Generate a template for marking/cutting vortilons.
@@ -697,9 +680,11 @@ class JigFactory:
         class PlaceholderWing(AircraftComponent):
             def __init__(self):
                 super().__init__("placeholder", "Placeholder for jig generation")
+
             def generate_geometry(self):
                 self._geometry = cq.Workplane("XY").box(100, 50, 5)
                 return self._geometry
+
             def export_dxf(self, path):
                 return path
 
@@ -710,7 +695,7 @@ class JigFactory:
             jig_root = JigFactory.generate_incidence_cradle(
                 placeholder,
                 station_bl=23.3,
-                incidence_angle=config.geometry.wing_incidence
+                incidence_angle=config.geometry.wing_incidence,
             )
             cq.exporters.export(jig_root, str(output_dir / "JIG_wing_root_BL23.stl"))
         except Exception as e:
@@ -721,7 +706,7 @@ class JigFactory:
             jig_mid = JigFactory.generate_incidence_cradle(
                 placeholder,
                 station_bl=79.0,
-                incidence_angle=config.geometry.wing_incidence
+                incidence_angle=config.geometry.wing_incidence,
             )
             cq.exporters.export(jig_mid, str(output_dir / "JIG_wing_mid_BL79.stl"))
         except Exception as e:
@@ -732,7 +717,7 @@ class JigFactory:
             jig_canard = JigFactory.generate_incidence_cradle(
                 placeholder,
                 station_bl=0.0,
-                incidence_angle=config.geometry.canard_incidence
+                incidence_angle=config.geometry.canard_incidence,
             )
             cq.exporters.export(jig_canard, str(output_dir / "JIG_canard_root.stl"))
         except Exception as e:
@@ -752,10 +737,12 @@ class JigFactory:
             cq.exporters.export(vortilon, str(output_dir / "TEMPLATE_vortilon.stl"))
         except Exception as e:
             print(f"  Warning: Could not generate vortilon template: {e}")
+
+
 class GCodeEngine:
     """
     High-level orchestrator for manufacturing output.
-    
+
     Manages:
     - Material-specific process calibration (Kerf vs Speed)
     - Batch generation for multiple wing segments
@@ -765,7 +752,7 @@ class GCodeEngine:
     def __init__(self, output_root: Union[Path, str] = Path("output/gcode")):
         self.output_root = Path(output_root)
         self.output_root.mkdir(parents=True, exist_ok=True)
-        
+
         # Calibration database (Foam Type -> Process)
         self.processes = {
             "styrofoam_blue": HotWireProcess(
@@ -773,48 +760,49 @@ class GCodeEngine:
                 wire_temp_f=400.0,
                 kerf_in=0.045,
                 max_feed_ipm=5.0,
-                notes="Standard wing foam"
+                notes="Standard wing foam",
             ),
             "urethane_2lb": HotWireProcess(
                 foam_type="urethane_2lb",
                 wire_temp_f=500.0,
                 kerf_in=0.035,
                 max_feed_ipm=3.5,
-                notes="High-temp fuselage foam"
+                notes="High-temp fuselage foam",
             ),
             "divinycell_h45": HotWireProcess(
                 foam_type="divinycell_h45",
                 wire_temp_f=550.0,
                 kerf_in=0.030,
                 max_feed_ipm=2.0,
-                notes="Structural PVC foam"
-            )
+                notes="Structural PVC foam",
+            ),
         }
 
     def get_process(self, foam_type: str) -> HotWireProcess:
         """Retrieve calibrated process for a specific foam."""
         return self.processes.get(foam_type.lower(), self.processes["styrofoam_blue"])
 
-    def generate_component_gcode(self, component: 'FoamCore', foam_name: str = "styrofoam_blue") -> Path:
+    def generate_component_gcode(
+        self, component: "FoamCore", foam_name: str = "styrofoam_blue"
+    ) -> Path:
         """
         Calibrate and export G-code for a whole component.
         """
         process = self.get_process(foam_name)
-        
+
         # Configure the writer based on calibrated process
         mfg_config = GCodeConfig(
-            feed_rate=process.max_feed_ipm,
-            wire_kerf=process.kerf_in
+            feed_rate=process.max_feed_ipm, wire_kerf=process.kerf_in
         )
-        
+
         writer = GCodeWriter(
             root_profile=component.get_root_profile(),
             tip_profile=component.get_tip_profile(),
             kerf_offset=process.kerf_in,
             feed_rate=process.max_feed_ipm,
-            config=mfg_config
+            config=mfg_config,
         )
-        
+
         target_file = self.output_root / f"{component.name}.tap"
         return writer.write(target_file)
 

@@ -2,6 +2,7 @@
 
 Designed for CI to refuse artifacts lacking provenance.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -14,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from core.metadata import REQUIRED_FIELDS
+from core.metadata import REQUIRED_FIELDS  # noqa: E402
 
 
 ARTIFACT_EXTENSIONS = {".step", ".stl", ".tap", ".gcode", ".dxf"}

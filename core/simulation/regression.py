@@ -50,7 +50,9 @@ class RegressionRunner:
             ),
         ]
 
-    def _wing_reflex_moment(self, aero: OpenVSPAdapter, _: BeamFEAAdapter) -> ScenarioResult:
+    def _wing_reflex_moment(
+        self, aero: OpenVSPAdapter, _: BeamFEAAdapter
+    ) -> ScenarioResult:
         polars = aero.run_vspaero([0])
         cm0 = polars[0].cm if polars else 0.0
         washout = config.geometry.wing_washout
@@ -60,14 +62,18 @@ class RegressionRunner:
             metrics={"cm_at_trim": metric},
         )
 
-    def _lift_curve_slope(self, aero: OpenVSPAdapter, _: BeamFEAAdapter) -> ScenarioResult:
+    def _lift_curve_slope(
+        self, aero: OpenVSPAdapter, _: BeamFEAAdapter
+    ) -> ScenarioResult:
         slope = aero.lift_curve_slope([-4, 0])
         return ScenarioResult(
             name="lift_curve_slope",
             metrics={"cl_per_deg": slope},
         )
 
-    def _spar_tip_deflection(self, _: OpenVSPAdapter, fea: BeamFEAAdapter) -> ScenarioResult:
+    def _spar_tip_deflection(
+        self, _: OpenVSPAdapter, fea: BeamFEAAdapter
+    ) -> ScenarioResult:
         spar = fea.nominal_spar_check()
         jig = fea.jig_flatness_check()
         combined_deflection = spar["tip_deflection_in"] + 0.1 * jig["tip_deflection_in"]
@@ -87,7 +93,9 @@ class RegressionRunner:
             results.append(scenario.evaluate(self.aero, self.fea))
         return results
 
-    def to_serializable(self, results: Iterable[ScenarioResult]) -> Dict[str, Dict[str, float]]:
+    def to_serializable(
+        self, results: Iterable[ScenarioResult]
+    ) -> Dict[str, Dict[str, float]]:
         return {res.name: res.metrics for res in results}
 
     def load_baseline(self, baseline_path: Path) -> Dict[str, Dict[str, float]]:

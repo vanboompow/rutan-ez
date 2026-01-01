@@ -14,25 +14,26 @@ All dimensions derive from config/aircraft_config.py.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 import numpy as np
 import cadquery as cq
 
 from config import config
 from .base import AircraftComponent, FoamCore
-from .aerodynamics import Airfoil, AirfoilFactory, airfoil_factory
+from .aerodynamics import Airfoil, AirfoilFactory
 from .manufacturing import JigFactory  # NEW Import
 
 
 @dataclass
 class WingStation:
     """Definition of a spanwise station for lofting."""
-    butt_line: float         # Spanwise location (inches from centerline)
-    chord: float             # Local chord length
-    airfoil: Airfoil         # Airfoil at this station
-    twist: float = 0.0       # Local twist/washout (degrees)
-    x_offset: float = 0.0    # Chordwise offset (for sweep)
-    z_offset: float = 0.0    # Vertical offset (for dihedral)
+
+    butt_line: float  # Spanwise location (inches from centerline)
+    chord: float  # Local chord length
+    airfoil: Airfoil  # Airfoil at this station
+    twist: float = 0.0  # Local twist/washout (degrees)
+    x_offset: float = 0.0  # Chordwise offset (for sweep)
+    z_offset: float = 0.0  # Vertical offset (for dihedral)
 
 
 class WingGenerator(FoamCore):
@@ -59,7 +60,7 @@ class WingGenerator(FoamCore):
         dihedral_angle: float = 0.0,
         washout: float = 0.0,
         n_stations: int = 5,
-        description: str = ""
+        description: str = "",
     ):
         """
         Initialize wing generator.
@@ -115,7 +116,7 @@ class WingGenerator(FoamCore):
                     x_offset = 0.0
                     for j in range(i):
                         seg_span = semi_span / (self.n_stations - 1)
-                        seg_sweep = self.sweep_angle[min(j, len(self.sweep_angle)-1)]
+                        seg_sweep = self.sweep_angle[min(j, len(self.sweep_angle) - 1)]
                         x_offset += seg_span * np.tan(np.radians(seg_sweep))
             else:
                 x_offset = butt_line * np.tan(np.radians(self.sweep_angle))
@@ -136,14 +137,16 @@ class WingGenerator(FoamCore):
             if abs(twist) > 0.001:
                 airfoil = airfoil.apply_washout(twist)
 
-            stations.append(WingStation(
-                butt_line=butt_line,
-                chord=chord,
-                airfoil=airfoil,
-                twist=twist,
-                x_offset=x_offset,
-                z_offset=z_offset
-            ))
+            stations.append(
+                WingStation(
+                    butt_line=butt_line,
+                    chord=chord,
+                    airfoil=airfoil,
+                    twist=twist,
+                    x_offset=x_offset,
+                    z_offset=z_offset,
+                )
+            )
 
         return stations
 
@@ -169,9 +172,11 @@ class WingGenerator(FoamCore):
             # 3. Translate by z_offset in Z (dihedral)
 
             # CadQuery wire manipulation
-            wire_moved = wire.moved(cq.Location(
-                cq.Vector(station.x_offset, station.butt_line, station.z_offset)
-            ))
+            wire_moved = wire.moved(
+                cq.Location(
+                    cq.Vector(station.x_offset, station.butt_line, station.z_offset)
+                )
+            )
             wires.append(wire_moved)
 
         # Loft through all station wires
@@ -179,9 +184,6 @@ class WingGenerator(FoamCore):
             raise ValueError("Need at least 2 stations for lofting")
 
         # Build loft using CadQuery
-        # Start with first wire as a workplane reference
-        result = cq.Workplane("XY")
-
         # Create faces from wires
         faces = [cq.Face.makeFromWires(w) for w in wires]
 
@@ -207,7 +209,7 @@ class WingGenerator(FoamCore):
         self,
         spar_x_start: float = 0.25,
         spar_width: Optional[float] = None,
-        trough_depth: Optional[float] = None
+        trough_depth: Optional[float] = None,
     ) -> cq.Workplane:
         """
         Subtract spar cap trough from foam core.
@@ -254,9 +256,7 @@ class WingGenerator(FoamCore):
         root_wire = self.get_root_profile()
         root_path = output_path / f"{self.name}_root.dxf"
         cq.exporters.export(
-            cq.Workplane("XY").add(root_wire),
-            str(root_path),
-            exportType="DXF"
+            cq.Workplane("XY").add(root_wire), str(root_path), exportType="DXF"
         )
         self._write_artifact_metadata(root_path, artifact_type="DXF")
 
@@ -264,9 +264,7 @@ class WingGenerator(FoamCore):
         tip_wire = self.get_tip_profile()
         tip_path = output_path / f"{self.name}_tip.dxf"
         cq.exporters.export(
-            cq.Workplane("XY").add(tip_wire),
-            str(tip_path),
-            exportType="DXF"
+            cq.Workplane("XY").add(tip_wire), str(tip_path), exportType="DXF"
         )
         self._write_artifact_metadata(tip_path, artifact_type="DXF")
 
@@ -274,7 +272,9 @@ class WingGenerator(FoamCore):
 
     # === NEW: Manufacturing Methods ===
 
-    def generate_segments(self, max_block_length: float = 48.0) -> List['WingGenerator']:
+    def generate_segments(
+        self, max_block_length: float = 48.0
+    ) -> List["WingGenerator"]:
         """
         Split the wing into manufacturable segments for CNC foam cutting.
 
@@ -311,8 +311,12 @@ class WingGenerator(FoamCore):
             eta_inboard = bl_inboard / semi_span
             eta_outboard = bl_outboard / semi_span
 
-            chord_inboard = self.root_chord + eta_inboard * (self.tip_chord - self.root_chord)
-            chord_outboard = self.root_chord + eta_outboard * (self.tip_chord - self.root_chord)
+            chord_inboard = self.root_chord + eta_inboard * (
+                self.tip_chord - self.root_chord
+            )
+            chord_outboard = self.root_chord + eta_outboard * (
+                self.tip_chord - self.root_chord
+            )
 
             # Calculate x-offset (sweep) at segment root
             x_offset_inboard = bl_inboard * np.tan(np.radians(self.sweep_angle))
@@ -353,7 +357,7 @@ class WingGenerator(FoamCore):
                 dihedral_angle=self.dihedral_angle,
                 washout=washout_outboard - washout_inboard,  # Relative washout
                 n_stations=max(3, self.n_stations // num_segments),
-                description=f"{self.description} - Segment {seg_idx + 1} of {num_segments}"
+                description=f"{self.description} - Segment {seg_idx + 1} of {num_segments}",
             )
 
             # Store segment metadata
@@ -368,7 +372,9 @@ class WingGenerator(FoamCore):
 
         return segments
 
-    def export_segments_gcode(self, output_dir: Path, max_block_length: float = 48.0) -> List[Path]:
+    def export_segments_gcode(
+        self, output_dir: Path, max_block_length: float = 48.0
+    ) -> List[Path]:
         """
         Generate G-code for all wing segments.
 
@@ -402,14 +408,9 @@ class WingGenerator(FoamCore):
 
         # Root incidence jig
         jig = JigFactory.generate_incidence_cradle(
-            self,
-            station_bl=23.0,
-            incidence_angle=config.geometry.wing_incidence
+            self, station_bl=23.0, incidence_angle=config.geometry.wing_incidence
         )
-        cq.exporters.export(
-            jig,
-            str(output_dir / f"JIG_{self.name}_root.stl")
-        )
+        cq.exporters.export(jig, str(output_dir / f"JIG_{self.name}_root.stl"))
 
 
 class CanardGenerator(WingGenerator):
@@ -422,7 +423,7 @@ class CanardGenerator(WingGenerator):
     def __init__(
         self,
         name: str = "canard_core",
-        description: str = "Roncz R1145MS canard foam core"
+        description: str = "Roncz R1145MS canard foam core",
     ):
         """
         Initialize canard with safety-mandated parameters.
@@ -442,9 +443,9 @@ class CanardGenerator(WingGenerator):
             tip_chord=config.geometry.canard_tip_chord,
             sweep_angle=config.geometry.canard_sweep_le,
             dihedral_angle=0.0,  # Canard has no dihedral
-            washout=0.0,         # Canard has no washout
+            washout=0.0,  # Canard has no washout
             n_stations=5,
-            description=description
+            description=description,
         )
 
         # Record safety compliance
@@ -455,14 +456,14 @@ class CanardGenerator(WingGenerator):
 class MainWingGenerator(WingGenerator):
     """
     Specialized generator for the main wing.
-    
+
     Uses defaults from config.geometry and config.airfoils.
     """
 
     def __init__(
         self,
         name: str = "main_wing",
-        description: str = "Eppler 1230 Modified wing foam core"
+        description: str = "Eppler 1230 Modified wing foam core",
     ):
         factory = AirfoilFactory()
         root_af = factory.load(config.airfoils.wing_root)
@@ -479,16 +480,17 @@ class MainWingGenerator(WingGenerator):
             dihedral_angle=config.geometry.wing_dihedral,
             washout=config.geometry.wing_washout,
             n_stations=10,
-            description=description
+            description=description,
         )
 
 
 @dataclass
 class BulkheadProfile:
     """Fuselage cross-section at a station."""
-    station: float       # FS (fuselage station) in inches
-    width: float         # Maximum width at this station
-    height: float        # Maximum height at this station
+
+    station: float  # FS (fuselage station) in inches
+    width: float  # Maximum width at this station
+    height: float  # Maximum height at this station
     floor_height: float  # Floor position relative to datum
 
 
@@ -501,9 +503,7 @@ class Fuselage(AircraftComponent):
     """
 
     def __init__(
-        self,
-        name: str = "fuselage",
-        description: str = "Long-EZ fuselage OML"
+        self, name: str = "fuselage", description: str = "Long-EZ fuselage OML"
     ):
         super().__init__(name, description)
         self._profiles: List[BulkheadProfile] = []
@@ -517,40 +517,31 @@ class Fuselage(AircraftComponent):
         # These are derived from the SSOT, not hard-coded
         self._profiles = [
             BulkheadProfile(
-                station=geo.fs_nose,
-                width=0.0,
-                height=0.0,
-                floor_height=0.0
+                station=geo.fs_nose, width=0.0, height=0.0, floor_height=0.0
             ),
             BulkheadProfile(
                 station=geo.fs_canard_le,
                 width=18.0,  # Derived from canard attachment
                 height=24.0,
-                floor_height=-8.0
+                floor_height=-8.0,
             ),
             BulkheadProfile(
                 station=geo.fs_pilot_seat,  # F-22
                 width=geo.cockpit_width,
                 height=38.0,
-                floor_height=-12.0
+                floor_height=-12.0,
             ),
             BulkheadProfile(
-                station=geo.fs_rear_seat,   # F-28
+                station=geo.fs_rear_seat,  # F-28
                 width=geo.cockpit_width - 2.0,  # Slight taper
                 height=34.0,
-                floor_height=-10.0
+                floor_height=-10.0,
             ),
             BulkheadProfile(
-                station=geo.fs_firewall,
-                width=18.0,
-                height=20.0,
-                floor_height=-6.0
+                station=geo.fs_firewall, width=18.0, height=20.0, floor_height=-6.0
             ),
             BulkheadProfile(
-                station=geo.fs_tail,
-                width=6.0,
-                height=8.0,
-                floor_height=-2.0
+                station=geo.fs_tail, width=6.0, height=8.0, floor_height=-2.0
             ),
         ]
 
@@ -563,7 +554,9 @@ class Fuselage(AircraftComponent):
 
         if w < 0.1 or h < 0.1:
             # Near-point for nose - circle in YZ plane
-            return cq.Wire.makeCircle(0.1, cq.Vector(profile.station, 0, 0), cq.Vector(1, 0, 0))
+            return cq.Wire.makeCircle(
+                0.1, cq.Vector(profile.station, 0, 0), cq.Vector(1, 0, 0)
+            )
 
         # Create ellipse in YZ plane
         ellipse = (
@@ -629,9 +622,7 @@ class Fuselage(AircraftComponent):
                 station_name = f"FS_{profile.station:.0f}"
                 bulkhead_path = output_path / f"{self.name}_{station_name}.dxf"
                 cq.exporters.export(
-                    cq.Workplane("XY").add(wire),
-                    str(bulkhead_path),
-                    exportType="DXF"
+                    cq.Workplane("XY").add(wire), str(bulkhead_path), exportType="DXF"
                 )
                 self._write_artifact_metadata(bulkhead_path, artifact_type="DXF")
 

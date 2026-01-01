@@ -2,6 +2,7 @@
 
 Runs config validation and ensures artifact metadata is present.
 """
+
 from __future__ import annotations
 
 import sys
@@ -11,8 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from config import config
-from scripts.validate_metadata import main as validate_metadata_main
+from config import config  # noqa: E402
+from scripts.validate_metadata import main as validate_metadata_main  # noqa: E402
 
 
 def run_config_validation() -> int:

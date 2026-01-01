@@ -11,10 +11,12 @@ Key Metrics:
 - Canard Stall Priority: Canard must stall before wing for safety
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import json
+import logging
 import math
 from config import config
 
@@ -22,15 +24,16 @@ from config import config
 @dataclass
 class StabilityMetrics:
     """Key flight safety indicators."""
-    cg_location: float          # Center of Gravity (FS inches)
-    neutral_point: float        # Aerodynamic Center (FS inches)
-    static_margin: float        # % MAC (Mean Aerodynamic Chord)
-    is_stable: bool             # Margin > 5% and < 20%
+
+    cg_location: float  # Center of Gravity (FS inches)
+    neutral_point: float  # Aerodynamic Center (FS inches)
+    static_margin: float  # % MAC (Mean Aerodynamic Chord)
+    is_stable: bool  # Margin > 5% and < 20%
 
     # Additional metrics
-    mac: float = 0.0            # Mean Aerodynamic Chord
-    cg_range_fwd: float = 0.0   # Forward CG limit
-    cg_range_aft: float = 0.0   # Aft CG limit
+    mac: float = 0.0  # Mean Aerodynamic Chord
+    cg_range_fwd: float = 0.0  # Forward CG limit
+    cg_range_aft: float = 0.0  # Aft CG limit
 
     def summary(self) -> str:
         """Generate human-readable stability summary."""
@@ -54,9 +57,10 @@ Status: {status}
 @dataclass
 class WeightItem:
     """Single weight component for W&B calculations."""
+
     name: str
-    weight: float           # pounds
-    arm: float              # inches from datum (FS)
+    weight: float  # pounds
+    arm: float  # inches from datum (FS)
     category: str = "fixed"  # fixed, fuel, payload
 
     @property
@@ -67,6 +71,7 @@ class WeightItem:
 @dataclass
 class WeightBalance:
     """Complete weight and balance calculation."""
+
     items: List[WeightItem] = field(default_factory=list)
 
     @property
@@ -92,10 +97,14 @@ class WeightBalance:
         lines.append("-" * 40)
 
         for item in self.items:
-            lines.append(f"{item.name:<25} {item.weight:>8.1f} {item.arm:>8.1f} {item.moment:>10.1f}")
+            lines.append(
+                f"{item.name:<25} {item.weight:>8.1f} {item.arm:>8.1f} {item.moment:>10.1f}"
+            )
 
         lines.append("-" * 40)
-        lines.append(f"{'TOTAL':<25} {self.total_weight:>8.1f} {self.cg_location:>8.1f} {self.total_moment:>10.1f}")
+        lines.append(
+            f"{'TOTAL':<25} {self.total_weight:>8.1f} {self.cg_location:>8.1f} {self.total_moment:>10.1f}"
+        )
         lines.append("")
         lines.append(f"Center of Gravity: {self.cg_location:.2f} in (FS)")
 
@@ -145,13 +154,15 @@ class PhysicsEngine:
         taper = ct / cr
 
         # MAC length
-        mac = (2/3) * cr * (1 + taper + taper**2) / (1 + taper)
+        mac = (2 / 3) * cr * (1 + taper + taper**2) / (1 + taper)
 
         # Spanwise location of MAC (from root)
-        y_mac = (self.geo.wing_span / 6) * (1 + 2*taper) / (1 + taper)
+        y_mac = (self.geo.wing_span / 6) * (1 + 2 * taper) / (1 + taper)
 
         # Leading edge location of MAC (accounting for sweep)
-        x_mac_le = self.geo.fs_wing_le + y_mac * math.tan(math.radians(self.geo.wing_sweep_le))
+        x_mac_le = self.geo.fs_wing_le + y_mac * math.tan(
+            math.radians(self.geo.wing_sweep_le)
+        )
 
         return mac, x_mac_le
 
@@ -188,9 +199,7 @@ class PhysicsEngine:
         ar_wing = self.geo.wing_aspect_ratio
 
         # Calculate canard aspect ratio
-        canard_semi_span = self.geo.canard_span / 2
-        canard_avg_chord = (self.geo.canard_root_chord + self.geo.canard_tip_chord) / 2
-        ar_canard = (self.geo.canard_span / 12)**2 / s_canard  # span in feet
+        ar_canard = (self.geo.canard_span / 12) ** 2 / s_canard  # span in feet
 
         # Lift curve slopes (per radian)
         a_wing = 2 * math.pi * ar_wing / (2 + math.sqrt(4 + ar_wing**2))
@@ -202,7 +211,9 @@ class PhysicsEngine:
         eta_canard = 0.90
 
         # Calculate NP
-        numerator = (a_wing * s_wing * ac_wing) + (a_canard * s_canard * ac_canard * eta_canard)
+        numerator = (a_wing * s_wing * ac_wing) + (
+            a_canard * s_canard * ac_canard * eta_canard
+        )
         denominator = (a_wing * s_wing) + (a_canard * s_canard * eta_canard)
 
         np_location = numerator / denominator
@@ -243,7 +254,7 @@ class PhysicsEngine:
             is_stable=(0.05 <= margin <= 0.20),
             mac=mac,
             cg_range_fwd=cg_range_fwd,
-            cg_range_aft=cg_range_aft
+            cg_range_aft=cg_range_aft,
         )
 
     def add_payload(self, name: str, weight: float, arm: float):
@@ -252,7 +263,9 @@ class PhysicsEngine:
 
     def add_fuel(self, gallons: float, arm: float = 95.0):
         """Add fuel to weight & balance (6 lbs/gal for avgas)."""
-        self._weight_balance.add_item(f"Fuel ({gallons:.1f} gal)", gallons * 6.0, arm, "fuel")
+        self._weight_balance.add_item(
+            f"Fuel ({gallons:.1f} gal)", gallons * 6.0, arm, "fuel"
+        )
 
     def get_weight_balance(self) -> WeightBalance:
         """Get current weight & balance state."""
@@ -269,19 +282,20 @@ class PhysicsEngine:
         Returns:
             Tuple of (is_safe, message)
         """
-        # Wing loading comparison (simplified)
-        # For safety, canard should be more heavily loaded
-        wing_loading = self.geo.wing_area  # Placeholder
-        canard_loading = self.geo.canard_area
-
-        # Area ratio check
+        # Area ratio check (canard should be appropriately sized relative to wing)
         area_ratio = self.geo.canard_area / self.geo.wing_area
 
         # For Long-EZ, typical safe ratio is 0.12-0.18
         if 0.10 <= area_ratio <= 0.20:
-            return True, f"Canard/Wing area ratio: {area_ratio:.3f} (safe range: 0.10-0.20)"
+            return (
+                True,
+                f"Canard/Wing area ratio: {area_ratio:.3f} (safe range: 0.10-0.20)",
+            )
         else:
-            return False, f"WARNING: Canard/Wing area ratio {area_ratio:.3f} outside safe range!"
+            return (
+                False,
+                f"WARNING: Canard/Wing area ratio {area_ratio:.3f} outside safe range!",
+            )
 
     def export_json(self, output_path: Path) -> Path:
         """Export stability analysis to JSON."""
@@ -300,20 +314,17 @@ class PhysicsEngine:
                 "mac_length": mac,
                 "mac_le_fs": mac_le,
                 "cg_forward_limit": metrics.cg_range_fwd,
-                "cg_aft_limit": metrics.cg_range_aft
+                "cg_aft_limit": metrics.cg_range_aft,
             },
-            "canard_safety": {
-                "stall_priority_ok": canard_safe,
-                "message": canard_msg
-            },
+            "canard_safety": {"stall_priority_ok": canard_safe, "message": canard_msg},
             "weight_balance": {
                 "empty_weight": self._weight_balance.total_weight,
                 "empty_cg": self._weight_balance.cg_location,
                 "items": [
                     {"name": item.name, "weight": item.weight, "arm": item.arm}
                     for item in self._weight_balance.items
-                ]
-            }
+                ],
+            },
         }
 
         output_path = Path(output_path)
@@ -347,10 +358,6 @@ class VSPBridge:
         """
         geo = config.geometry
 
-        # Calculate derived values
-        wing_taper = geo.wing_tip_chord / geo.wing_root_chord
-        canard_taper = geo.canard_tip_chord / geo.canard_root_chord
-
         script = [
             "//=========================================",
             "// Open-EZ PDE: VSP Generation Script",
@@ -363,76 +370,76 @@ class VSPBridge:
             "  DeleteAll();",
             "",
             "  //--- MAIN WING ---",
-            "  string wid = AddGeom(\"WING\", \"\");",
-            "  SetGeomName(wid, \"MainWing\");",
+            '  string wid = AddGeom("WING", "");',
+            '  SetGeomName(wid, "MainWing");',
             "",
             "  // Wing planform",
-            f"  SetParmVal(wid, \"Span\", \"XSec_1\", {geo.wing_span / 2});",
-            f"  SetParmVal(wid, \"Root_Chord\", \"XSec_1\", {geo.wing_root_chord});",
-            f"  SetParmVal(wid, \"Tip_Chord\", \"XSec_1\", {geo.wing_tip_chord});",
-            f"  SetParmVal(wid, \"Sweep\", \"XSec_1\", {geo.wing_sweep_le});",
-            f"  SetParmVal(wid, \"Dihedral\", \"XSec_1\", {geo.wing_dihedral});",
+            f'  SetParmVal(wid, "Span", "XSec_1", {geo.wing_span / 2});',
+            f'  SetParmVal(wid, "Root_Chord", "XSec_1", {geo.wing_root_chord});',
+            f'  SetParmVal(wid, "Tip_Chord", "XSec_1", {geo.wing_tip_chord});',
+            f'  SetParmVal(wid, "Sweep", "XSec_1", {geo.wing_sweep_le});',
+            f'  SetParmVal(wid, "Dihedral", "XSec_1", {geo.wing_dihedral});',
             "",
             "  // Wing position",
-            f"  SetParmVal(wid, \"X_Rel_Location\", \"XForm\", {geo.fs_wing_le});",
-            "  SetParmVal(wid, \"Y_Rel_Location\", \"XForm\", 0);",
-            "  SetParmVal(wid, \"Z_Rel_Location\", \"XForm\", 0);",
+            f'  SetParmVal(wid, "X_Rel_Location", "XForm", {geo.fs_wing_le});',
+            '  SetParmVal(wid, "Y_Rel_Location", "XForm", 0);',
+            '  SetParmVal(wid, "Z_Rel_Location", "XForm", 0);',
             "",
             "  // Wing incidence",
-            f"  SetParmVal(wid, \"X_Rel_Rotation\", \"XForm\", {geo.wing_incidence});",
+            f'  SetParmVal(wid, "X_Rel_Rotation", "XForm", {geo.wing_incidence});',
             "",
             "  // Airfoil (placeholder - would need actual airfoil import)",
             "  // ChangeXSecShape(GetXSec(GetXSecSurf(wid, 0), 0), XS_FILE_AIRFOIL);",
             "",
             "  //--- CANARD ---",
-            "  string cid = AddGeom(\"WING\", \"\");",
-            "  SetGeomName(cid, \"Canard\");",
+            '  string cid = AddGeom("WING", "");',
+            '  SetGeomName(cid, "Canard");',
             "",
             "  // Canard planform",
-            f"  SetParmVal(cid, \"Span\", \"XSec_1\", {geo.canard_span / 2});",
-            f"  SetParmVal(cid, \"Root_Chord\", \"XSec_1\", {geo.canard_root_chord});",
-            f"  SetParmVal(cid, \"Tip_Chord\", \"XSec_1\", {geo.canard_tip_chord});",
-            f"  SetParmVal(cid, \"Sweep\", \"XSec_1\", {geo.canard_sweep_le});",
+            f'  SetParmVal(cid, "Span", "XSec_1", {geo.canard_span / 2});',
+            f'  SetParmVal(cid, "Root_Chord", "XSec_1", {geo.canard_root_chord});',
+            f'  SetParmVal(cid, "Tip_Chord", "XSec_1", {geo.canard_tip_chord});',
+            f'  SetParmVal(cid, "Sweep", "XSec_1", {geo.canard_sweep_le});',
             "",
             "  // Canard position",
-            f"  SetParmVal(cid, \"X_Rel_Location\", \"XForm\", {geo.fs_canard_le});",
-            "  SetParmVal(cid, \"Y_Rel_Location\", \"XForm\", 0);",
-            "  SetParmVal(cid, \"Z_Rel_Location\", \"XForm\", 0);",
+            f'  SetParmVal(cid, "X_Rel_Location", "XForm", {geo.fs_canard_le});',
+            '  SetParmVal(cid, "Y_Rel_Location", "XForm", 0);',
+            '  SetParmVal(cid, "Z_Rel_Location", "XForm", 0);',
             "",
             "  // Canard incidence",
-            f"  SetParmVal(cid, \"X_Rel_Rotation\", \"XForm\", {geo.canard_incidence});",
+            f'  SetParmVal(cid, "X_Rel_Rotation", "XForm", {geo.canard_incidence});',
             "",
             "  //--- FUSELAGE ---",
-            "  string fid = AddGeom(\"FUSELAGE\", \"\");",
-            "  SetGeomName(fid, \"Fuselage\");",
+            '  string fid = AddGeom("FUSELAGE", "");',
+            '  SetGeomName(fid, "Fuselage");',
             "",
             f"  double fuse_length = {geo.fs_tail - geo.fs_nose};",
-            "  SetParmVal(fid, \"Length\", \"Design\", fuse_length);",
+            '  SetParmVal(fid, "Length", "Design", fuse_length);',
             "",
             "  // Fuselage cross-sections",
             f"  // Cockpit width: {geo.cockpit_width} in",
             "",
             "  //--- VERTICAL STABILIZERS (Winglets) ---",
-            "  string vid = AddGeom(\"WING\", \"\");",
-            "  SetGeomName(vid, \"Winglet_L\");",
-            "  SetParmVal(vid, \"Span\", \"XSec_1\", 30);",
-            "  SetParmVal(vid, \"Sweep\", \"XSec_1\", 45);",
-            f"  SetParmVal(vid, \"X_Rel_Location\", \"XForm\", {geo.fs_wing_le + geo.wing_root_chord});",
-            f"  SetParmVal(vid, \"Y_Rel_Location\", \"XForm\", {geo.wing_span / 2});",
-            "  SetParmVal(vid, \"X_Rel_Rotation\", \"XForm\", 90);",
+            '  string vid = AddGeom("WING", "");',
+            '  SetGeomName(vid, "Winglet_L");',
+            '  SetParmVal(vid, "Span", "XSec_1", 30);',
+            '  SetParmVal(vid, "Sweep", "XSec_1", 45);',
+            f'  SetParmVal(vid, "X_Rel_Location", "XForm", {geo.fs_wing_le + geo.wing_root_chord});',
+            f'  SetParmVal(vid, "Y_Rel_Location", "XForm", {geo.wing_span / 2});',
+            '  SetParmVal(vid, "X_Rel_Rotation", "XForm", 90);',
             "",
             "  // Mirror for right winglet",
-            "  string vid2 = AddGeom(\"WING\", \"\");",
-            "  SetGeomName(vid2, \"Winglet_R\");",
+            '  string vid2 = AddGeom("WING", "");',
+            '  SetGeomName(vid2, "Winglet_R");',
             "  // (similar settings, mirrored)",
             "",
             "  //--- UPDATE MODEL ---",
             "  Update();",
             "",
             "  // Save model",
-            "  // WriteVSPFile(\"long_ez.vsp3\", SET_ALL);",
+            '  // WriteVSPFile("long_ez.vsp3", SET_ALL);',
             "",
-            "  Print(\"Open-EZ model generated successfully.\");",
+            '  Print("Open-EZ model generated successfully.");',
             "}",
         ]
 
@@ -460,10 +467,11 @@ class VSPBridge:
             "reference_span": config.geometry.wing_span / 12,  # feet
             "reference_chord": config.geometry.wing_root_chord / 12,  # feet
             "moment_reference": {
-                "x": config.geometry.fs_wing_le / 12 + config.geometry.wing_root_chord * 0.25 / 12,
+                "x": config.geometry.fs_wing_le / 12
+                + config.geometry.wing_root_chord * 0.25 / 12,
                 "y": 0,
-                "z": 0
-            }
+                "z": 0,
+            },
         }
 
         output_path = Path(output_path)
@@ -481,11 +489,7 @@ physics = PhysicsEngine()
 # OpenVSP Runner - Executes real OpenVSP or surrogate aerodynamics
 # =============================================================================
 
-from datetime import datetime
-from dataclasses import asdict
-from typing import Any
-from .vsp_integration import vsp_bridge
-import logging
+from .vsp_integration import vsp_bridge  # noqa: E402
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -494,6 +498,7 @@ logger.addHandler(logging.NullHandler())
 @dataclass
 class AerodynamicPoint:
     """Single operating point from a sweep."""
+
     alpha_deg: float
     cl: float
     cd: float
@@ -503,7 +508,8 @@ class AerodynamicPoint:
 @dataclass
 class TrimSweepResult:
     """Summary of a trim sweep across angle-of-attack."""
-    points: List['AerodynamicPoint']
+
+    points: List["AerodynamicPoint"]
     trimmed_alpha_deg: float
     static_margin: float
     description: str = ""
@@ -512,6 +518,7 @@ class TrimSweepResult:
 @dataclass
 class CLMaxResult:
     """Maximum lift characteristics from sweep."""
+
     cl_max: float
     alpha_at_clmax: float
     stall_warning_margin: float
@@ -520,6 +527,7 @@ class CLMaxResult:
 @dataclass
 class StructuralMeshManifest:
     """Placeholder manifest to hand geometry to downstream FEA."""
+
     mesh_directory: Path
     surfaces: Dict[str, Path]
     notes: str
@@ -568,7 +576,7 @@ class OpenVSPRunner:
             "canard": {
                 "span": geom.canard_span,
                 "area": geom.canard_area,
-                "aspect_ratio": (geom.canard_span ** 2) / geom.canard_area,
+                "aspect_ratio": (geom.canard_span**2) / geom.canard_area,
                 "airfoil": airfoils.canard.value,
             },
             "tail_arm": geom.canard_arm,
@@ -583,7 +591,7 @@ class OpenVSPRunner:
         alpha_range: Tuple[float, float] = (-4.0, 14.0),
         alpha_steps: int = 8,
         force_refresh: bool = False,
-    ) -> Tuple['TrimSweepResult', 'CLMaxResult', Path]:
+    ) -> Tuple["TrimSweepResult", "CLMaxResult", Path]:
         """
         Execute trim and CLmax sweeps, persisting results to cache.
 
@@ -610,7 +618,7 @@ class OpenVSPRunner:
         model: Dict[str, Any],
         alpha_range: Tuple[float, float],
         n_steps: int,
-    ) -> 'TrimSweepResult':
+    ) -> "TrimSweepResult":
         """Run a trim sweep using OpenVSP if available, otherwise surrogate."""
         vsp = self._try_import_vsp()
         if vsp:
@@ -619,7 +627,7 @@ class OpenVSPRunner:
 
         return self._synthetic_trim(model, alpha_range, n_steps)
 
-    def _run_clmax_search(self, model: Dict[str, Any]) -> 'CLMaxResult':
+    def _run_clmax_search(self, model: Dict[str, Any]) -> "CLMaxResult":
         """Search for CLmax using OpenVSP or surrogate."""
         vsp = self._try_import_vsp()
         if vsp:
@@ -633,7 +641,7 @@ class OpenVSPRunner:
         model: Dict[str, Any],
         alpha_range: Tuple[float, float],
         n_steps: int,
-    ) -> 'TrimSweepResult':
+    ) -> "TrimSweepResult":
         """Surrogate trim sweep using lifting-line theory."""
         wing = model["wing"]
         canard = model["canard"]
@@ -672,7 +680,9 @@ class OpenVSPRunner:
             cm = (cl_canard * canard_area * moment_arm * 1e-4) - 0.02 * alpha_rad
             cm_values.append(cm)
 
-            points.append(AerodynamicPoint(alpha_deg=alpha, cl=total_cl, cd=total_cd, cm=cm))
+            points.append(
+                AerodynamicPoint(alpha_deg=alpha, cl=total_cl, cd=total_cd, cm=cm)
+            )
 
         trimmed_alpha = self._interpolate_zero_crossing(alpha_values, cm_values)
         static_margin = 0.06
@@ -681,10 +691,10 @@ class OpenVSPRunner:
             points=points,
             trimmed_alpha_deg=trimmed_alpha,
             static_margin=static_margin,
-            description="Synthetic trim sweep (OpenVSP unavailable)"
+            description="Synthetic trim sweep (OpenVSP unavailable)",
         )
 
-    def _synthetic_clmax(self, model: Dict[str, Any]) -> 'CLMaxResult':
+    def _synthetic_clmax(self, model: Dict[str, Any]) -> "CLMaxResult":
         """Surrogate CLmax estimation."""
         wing_ar = model["wing"]["aspect_ratio"]
         canard_ar = model["canard"]["aspect_ratio"]
@@ -704,7 +714,7 @@ class OpenVSPRunner:
 
     def export_structural_mesh_manifest(
         self, model: Optional[Dict[str, Any]] = None, mesh_dir: Optional[Path] = None
-    ) -> 'StructuralMeshManifest':
+    ) -> "StructuralMeshManifest":
         """Generate a placeholder manifest for downstream FEA pipelines."""
         model = model or self.build_parametric_model()
         mesh_dir = mesh_dir or (self.cache_dir / "meshes")
@@ -724,7 +734,9 @@ class OpenVSPRunner:
         }
         manifest_path.write_text(json.dumps(payload, indent=2))
 
-        return StructuralMeshManifest(mesh_directory=mesh_dir, surfaces=surfaces, notes=payload["notes"])
+        return StructuralMeshManifest(
+            mesh_directory=mesh_dir, surfaces=surfaces, notes=payload["notes"]
+        )
 
     @staticmethod
     def _lifting_line_slope(aspect_ratio: float) -> float:
@@ -746,8 +758,8 @@ class OpenVSPRunner:
     def _write_cache(
         self,
         model: Dict[str, Any],
-        trim: 'TrimSweepResult',
-        clmax: 'CLMaxResult',
+        trim: "TrimSweepResult",
+        clmax: "CLMaxResult",
     ) -> None:
         payload = {
             "metadata": {
@@ -767,7 +779,7 @@ class OpenVSPRunner:
         self.cache_path.write_text(json.dumps(payload, indent=2))
         logger.info("OpenVSP validation cache written to %s", self.cache_path)
 
-    def _load_cached_results(self) -> Optional[Tuple['TrimSweepResult', 'CLMaxResult']]:
+    def _load_cached_results(self) -> Optional[Tuple["TrimSweepResult", "CLMaxResult"]]:
         try:
             data = json.loads(self.cache_path.read_text())
         except FileNotFoundError:
@@ -778,7 +790,7 @@ class OpenVSPRunner:
             points=points,
             trimmed_alpha_deg=data["trim_sweep"]["trimmed_alpha_deg"],
             static_margin=data["trim_sweep"]["static_margin"],
-            description=data["trim_sweep"].get("description", "")
+            description=data["trim_sweep"].get("description", ""),
         )
         clmax = CLMaxResult(**data["clmax"])
         return trim, clmax
