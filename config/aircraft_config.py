@@ -144,6 +144,7 @@ class AirfoilSelection:
 
     # SAFETY: Roncz is NON-NEGOTIABLE for the canard
     canard: AirfoilType = AirfoilType.RONCZ_R1145MS
+    allow_legacy_gu_canard: bool = False  # Explicit opt-in for legacy GU variants (not recommended)
 
     # Main wing uses modified Eppler with trailing-edge reflex
     wing_root: AirfoilType = AirfoilType.EPPLER_1230_MOD
@@ -206,10 +207,16 @@ class AircraftConfig:
 
         # SAFETY CHECK: Roncz canard is mandatory
         if self.airfoils.canard != AirfoilType.RONCZ_R1145MS:
-            errors.append(
-                "SAFETY VIOLATION: Canard must use RONCZ_R1145MS. "
-                "GU25-5(11)8 causes dangerous lift loss in rain."
-            )
+            if self.airfoils.canard == AirfoilType.GU25_5_11_8 and not self.airfoils.allow_legacy_gu_canard:
+                errors.append(
+                    "SAFETY BLOCK: GU25-5(11)8 canard is rain-unsafe. "
+                    "Set airfoils.allow_legacy_gu_canard=True only if replicating legacy plans with documented mitigation."
+                )
+            else:
+                errors.append(
+                    "SAFETY VIOLATION: Canard must use RONCZ_R1145MS. "
+                    "GU25-5(11)8 causes dangerous lift loss in rain."
+                )
 
         # COMPLIANCE CHECK: Builder credits must exceed 51%
         if self.compliance.total_builder_credit < 0.51:

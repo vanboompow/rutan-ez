@@ -378,14 +378,21 @@ class AirfoilFactory:
 
         This is a convenience method that enforces the safety requirement.
         """
-        # Verify config hasn't been tampered with
+        if config.airfoils.canard == AirfoilType.GU25_5_11_8 and not config.airfoils.allow_legacy_gu_canard:
+            raise ValueError(
+                "GU25-5(11)8 canard airfoil blocked for safety. "
+                "Set allow_legacy_gu_canard=True only if you accept degraded rain performance."
+            )
+
         if config.airfoils.canard != AirfoilType.RONCZ_R1145MS:
             import warnings
+
             warnings.warn(
-                "SAFETY: Overriding canard airfoil to Roncz R1145MS. "
-                "GU25-5(11)8 is unsafe in rain.",
-                UserWarning
+                "Non-Roncz canard selected via explicit override. "
+                "Verify DAR approval and document handling qualities.",
+                UserWarning,
             )
+            return self.load(config.airfoils.canard)
 
         return self.load(AirfoilType.RONCZ_R1145MS)
 

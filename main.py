@@ -44,6 +44,7 @@ def validate_config() -> bool:
 def generate_canard() -> None:
     """Generate canard foam core."""
     from core.structures import CanardGenerator
+    from core.compliance import compliance_task_tracker
 
     print("\n--- Generating Canard ---")
     canard = CanardGenerator()
@@ -51,8 +52,9 @@ def generate_canard() -> None:
     step_dir = project_root / "output" / "STEP"
     stl_dir = project_root / "output" / "STL"
     dxf_dir = project_root / "output" / "DXF"
+    docs_dir = project_root / "output" / "docs"
 
-    for d in [step_dir, stl_dir, dxf_dir]:
+    for d in [step_dir, stl_dir, dxf_dir, docs_dir]:
         d.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -60,6 +62,17 @@ def generate_canard() -> None:
         canard.export_step(step_dir)
         canard.export_stl(stl_dir)
         canard.export_dxf(dxf_dir)
+        compliance_task_tracker.record_generation(
+            component="canard",
+            artifact="cad",
+            note="Canard CAD exported for builder-operated hot-wire tooling.",
+        )
+        layup_file = compliance_task_tracker.write_layup_schedule("canard", docs_dir)
+        compliance_task_tracker.record_generation(
+            component="canard",
+            artifact="layup_schedule",
+            note=f"Layup schedule captured in {layup_file.name} for DAR review.",
+        )
         print(f"  Canard core exported to output/")
     except Exception as e:
         print(f"  Error generating canard: {e}")
@@ -69,6 +82,7 @@ def generate_wing() -> None:
     """Generate main wing foam cores."""
     from core.structures import WingGenerator
     from core.aerodynamics import airfoil_factory
+    from core.compliance import compliance_task_tracker
 
     print("\n--- Generating Main Wing ---")
 
@@ -88,12 +102,25 @@ def generate_wing() -> None:
     )
 
     step_dir = project_root / "output" / "STEP"
+    docs_dir = project_root / "output" / "docs"
     step_dir.mkdir(parents=True, exist_ok=True)
+    docs_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         wing.generate_geometry()
         wing.cut_spar_trough()
         wing.export_step(step_dir)
+        compliance_task_tracker.record_generation(
+            component="wing",
+            artifact="cad",
+            note="Wing CAD loft exported for builder-operated cutting.",
+        )
+        layup_file = compliance_task_tracker.write_layup_schedule("wing", docs_dir)
+        compliance_task_tracker.record_generation(
+            component="wing",
+            artifact="layup_schedule",
+            note=f"Wing layup schedule documented in {layup_file.name}.",
+        )
         print(f"  Main wing exported to output/STEP/")
     except Exception as e:
         print(f"  Error generating wing: {e}")
@@ -101,7 +128,7 @@ def generate_wing() -> None:
 
 def generate_compliance_report() -> None:
     """Generate FAA compliance report."""
-    from core.compliance import compliance_tracker
+    from core.compliance import compliance_task_tracker, compliance_tracker
 
     print("\n--- Generating Compliance Report ---")
 
@@ -118,6 +145,9 @@ def generate_compliance_report() -> None:
     # Export JSON data
     json_file = compliance_tracker.export_json(docs_dir)
     print(f"  JSON data written to: {json_file}")
+
+    checklist_file = compliance_task_tracker.write_checklist(docs_dir)
+    print(f"  Checklist written to: {checklist_file}")
 
 
 def main():
