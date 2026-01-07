@@ -628,3 +628,298 @@ class Fuselage(AircraftComponent):
                 self._write_artifact_metadata(bulkhead_path, artifact_type="DXF")
 
         return output_path / f"{self.name}_bulkheads.dxf"
+
+
+class StrakeGenerator(AircraftComponent):
+    """
+    Generate strake geometry for wing-fuselage integration.
+
+    The strakes serve three functions:
+    1. Aerodynamic: Smooth fuselage-wing blend, vortex generation
+    2. Structural: Wing box tie-in, landing gear support
+    3. Tankage: Fuel (baseline) or battery (E-Z conversion)
+
+    The Long-EZ strakes are complex shapes that blend the wing root
+    into the fuselage sides, housing ~26 gallons of fuel per side.
+    """
+
+    def __init__(
+        self,
+        name: str = "strake",
+        mode: str = "fuel",  # "fuel" or "battery"
+        side: str = "left",  # "left" or "right"
+        description: str = "Long-EZ strake tank",
+    ):
+        super().__init__(name, description)
+        self.mode = mode
+        self.side = side
+        self._internal_structure: Optional[cq.Workplane] = None
+
+    def generate_geometry(self) -> cq.Workplane:
+        """
+        Create strake solid using guide curves and loft.
+
+        Approach:
+        1. Define inboard profile (fuselage junction) - curved blend
+        2. Define outboard profile (wing root BL 23.3) - airfoil segment
+        3. Define leading edge curve (parabolic sweep)
+        4. Define trailing edge curve (straight to wing LE)
+        5. Loft with ruled surface constraint
+        """
+        strake_cfg = config.strakes
+        geo = config.geometry
+
+        # Key stations
+        fs_le = strake_cfg.fs_leading_edge  # ~110"
+        fs_te = strake_cfg.fs_trailing_edge  # ~145"
+        inboard_width = strake_cfg.inboard_width  # ~8" at fuselage
+
+        # Wing root is at BL 23.3" (half of distance from centerline to wing start)
+        bl_outboard = 23.3  # Wing root BL
+        bl_inboard = inboard_width / 2  # Fuselage side junction
+
+        # Strake height (transitions from fuselage to wing root airfoil)
+        fuselage_height = 12.0  # Approximate fuselage side height at strake
+        wing_root_thickness = geo.wing_root_chord * 0.12  # ~12% thick airfoil
+
+        # Create guide profiles at key stations
+        profiles = []
+
+        # Inboard profile (at fuselage junction)
+        # This is a simple flat rectangle where strake meets fuselage side
+        inboard_profile = (
+            cq.Workplane("YZ")
+            .center(bl_inboard, 0)
+            .rect(2.0, fuselage_height)
+            .wire()
+        )
+        profiles.append(inboard_profile.val().moved(
+            cq.Location(cq.Vector(fs_le, 0, 0))
+        ))
+
+        # Mid profile (blend region)
+        mid_bl = (bl_inboard + bl_outboard) / 2
+        mid_height = (fuselage_height + wing_root_thickness) / 2
+        mid_profile = (
+            cq.Workplane("YZ")
+            .center(mid_bl, 0)
+            .ellipse(mid_height / 2, 3.0)
+            .wire()
+        )
+        profiles.append(mid_profile.val().moved(
+            cq.Location(cq.Vector((fs_le + fs_te) / 2, 0, 0))
+        ))
+
+        # Outboard profile (wing root airfoil segment)
+        # Simplified as ellipse matching wing root thickness
+        outboard_profile = (
+            cq.Workplane("YZ")
+            .center(bl_outboard, 0)
+            .ellipse(wing_root_thickness / 2, geo.wing_root_chord * 0.08)
+            .wire()
+        )
+        profiles.append(outboard_profile.val().moved(
+            cq.Location(cq.Vector(fs_te, 0, 0))
+        ))
+
+        # Loft through profiles
+        try:
+            lofted = cq.Solid.makeLoft(profiles)
+            strake_solid = cq.Workplane("XY").add(lofted)
+        except Exception:
+            # Fallback: simple box approximation
+            length = fs_te - fs_le
+            width = bl_outboard - bl_inboard
+            height = (fuselage_height + wing_root_thickness) / 2
+
+            strake_solid = (
+                cq.Workplane("XY")
+                .box(length, width, height, centered=False)
+                .translate((fs_le, bl_inboard, -height / 2))
+            )
+
+        # Mirror for right side
+        if self.side == "right":
+            strake_solid = strake_solid.mirror("XZ")
+
+        self._geometry = strake_solid
+        return self._geometry
+
+    def generate_internal_structure(self) -> cq.Workplane:
+        """
+        Create tank baffles or battery cell dividers.
+
+        Fuel mode:
+        - 6" spaced anti-slosh baffles
+        - Sump at lowest point
+        - Filler neck at inboard edge
+
+        Battery mode:
+        - LiFePO4 cell cradles (2.625" pitch)
+        - Thermal spacers between modules
+        - BMS wiring channels
+        """
+        strake_cfg = config.strakes
+        fs_le = strake_cfg.fs_leading_edge
+        fs_te = strake_cfg.fs_trailing_edge
+
+        internal = cq.Workplane("XY")
+
+        if self.mode == "fuel":
+            # Generate anti-slosh baffles
+            baffle_spacing = strake_cfg.baffle_spacing
+            baffle_thickness = 0.125  # 1/8" plywood or foam
+
+            for x in np.arange(fs_le + baffle_spacing, fs_te, baffle_spacing):
+                # Simplified baffle as vertical plate
+                baffle = (
+                    cq.Workplane("YZ")
+                    .center(15.0, 0)
+                    .rect(10.0, 8.0)
+                    .extrude(baffle_thickness)
+                    .translate((x, 0, 0))
+                )
+                internal = internal.union(baffle)
+
+            # Sump depression at lowest point
+            sump = (
+                cq.Workplane("XY")
+                .center(fs_te - 3.0, 8.0 if self.side == "left" else -8.0)
+                .rect(4.0, 4.0)
+                .extrude(-2.0)
+            )
+            internal = internal.cut(sump)
+
+        elif self.mode == "battery":
+            # Generate battery cell cradles
+            cell_pitch = strake_cfg.battery_cell_pitch
+            module_count = strake_cfg.battery_module_count
+
+            # Cell dimensions (LiFePO4 prismatic)
+            cell_width = 2.5
+            cell_height = 6.0
+            cell_depth = 8.0
+
+            # Create cradle grid
+            for i in range(module_count):
+                x_pos = fs_le + 5.0 + i * (cell_pitch * 2)
+
+                # Cell divider walls
+                divider = (
+                    cq.Workplane("YZ")
+                    .center(15.0, 0)
+                    .rect(cell_height + 1, cell_depth + 1)
+                    .extrude(0.25)
+                    .translate((x_pos, 0, 0))
+                )
+                internal = internal.union(divider)
+
+            # Cooling channels
+            channel_height = 0.5
+            cooling = (
+                cq.Workplane("XY")
+                .center((fs_le + fs_te) / 2, 15.0 if self.side == "left" else -15.0)
+                .rect(fs_te - fs_le - 10, channel_height)
+                .extrude(channel_height)
+            )
+            internal = internal.cut(cooling)
+
+        self._internal_structure = internal
+        return internal
+
+    def generate_access_panels(self) -> List[cq.Workplane]:
+        """
+        Create removable panel geometry for inspection access.
+        """
+        strake_cfg = config.strakes
+        fs_mid = (strake_cfg.fs_leading_edge + strake_cfg.fs_trailing_edge) / 2
+
+        panels = []
+
+        # Main access panel (top surface)
+        panel_length = 8.0
+        panel_width = 6.0
+        panel = (
+            cq.Workplane("XY")
+            .center(fs_mid, 12.0 if self.side == "left" else -12.0)
+            .rect(panel_length, panel_width)
+            .extrude(0.125)
+        )
+        panels.append(panel)
+
+        # Fuel filler / charge port access
+        filler_panel = (
+            cq.Workplane("XY")
+            .center(strake_cfg.fs_trailing_edge - 5.0, 8.0 if self.side == "left" else -8.0)
+            .circle(2.0)
+            .extrude(0.125)
+        )
+        panels.append(filler_panel)
+
+        return panels
+
+    def calculate_cg_contribution(self) -> tuple:
+        """
+        Return (weight_lbs, arm_in, moment_in_lb) for W&B.
+
+        Uses self.mode to compute:
+        - Fuel: 6.0 lb/gal × volume
+        - Battery: module_count × cell weight
+        """
+        strake_cfg = config.strakes
+
+        if self.mode == "fuel":
+            # Fuel weight: 6.0 lb/gal
+            weight_full = strake_cfg.tank_volume_gal * 6.0
+            # CG arm at tank centroid
+            arm = (strake_cfg.fs_leading_edge + strake_cfg.fs_trailing_edge) / 2
+            return (weight_full, arm, weight_full * arm)
+
+        elif self.mode == "battery":
+            # LiFePO4 cell weight (100Ah prismatic ~6-7 lb each)
+            cells_per_module = strake_cfg.battery_cells_series  # 16S
+            cell_weight = 6.5  # lb per cell
+            module_weight = cells_per_module * cell_weight / 4  # 4P divides weight
+
+            # Total battery weight in this strake
+            weight = strake_cfg.battery_module_count * module_weight
+            arm = (strake_cfg.fs_leading_edge + strake_cfg.fs_trailing_edge) / 2
+            return (weight, arm, weight * arm)
+
+        return (0.0, 0.0, 0.0)
+
+    def export_dxf(self, output_path: Path) -> Path:
+        """Export strake profiles as DXF."""
+        if self._geometry is None:
+            self.generate_geometry()
+
+        # Export top-down view
+        output_path = Path(output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        dxf_path = output_path / f"{self.name}_{self.side}_{self.mode}.dxf"
+
+        try:
+            cq.exporters.export(self._geometry, str(dxf_path), exportType="DXF")
+            self._write_artifact_metadata(dxf_path, artifact_type="DXF")
+        except Exception as e:
+            # DXF export may fail for complex 3D geometry
+            import logging
+            logging.warning(f"Could not export strake DXF: {e}")
+
+        return dxf_path
+
+    def get_tank_volume(self) -> float:
+        """Return tank volume in gallons."""
+        if self.mode == "fuel":
+            return config.strakes.tank_volume_gal
+        elif self.mode == "battery":
+            # Approximate volume displaced by battery modules
+            cell_volume_in3 = 2.5 * 6.0 * 8.0  # Approximate cell dimensions
+            total_cells = (
+                config.strakes.battery_module_count *
+                config.strakes.battery_cells_series *
+                config.strakes.battery_cells_parallel
+            )
+            return (total_cells * cell_volume_in3) / 231.0  # Convert to gallons
+        return 0.0
