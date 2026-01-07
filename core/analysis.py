@@ -738,6 +738,122 @@ class OpenVSPRunner:
             mesh_directory=mesh_dir, surfaces=surfaces, notes=str(payload["notes"])
         )
 
+    def export_native_vsp3(self, output_path: Path) -> Path:
+        """
+        Generate .vsp3 file via OpenVSP Python API.
+
+        Falls back to JSON metadata if bindings unavailable.
+        """
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            import openvsp as vsp
+        except ImportError:
+            logger.warning("OpenVSP bindings not available, using JSON fallback")
+            return self._export_vsp3_metadata_fallback(output_path)
+
+        try:
+            vsp.ClearVSPModel()
+            geom = config.geometry
+
+            # Main wing
+            wing_id = vsp.AddGeom("WING", "")
+            vsp.SetGeomName(wing_id, "MainWing")
+            vsp.SetParmVal(wing_id, "Span", "XSec_1", geom.wing_span / 2)
+            vsp.SetParmVal(wing_id, "Root_Chord", "XSec_1", geom.wing_root_chord)
+            vsp.SetParmVal(wing_id, "Tip_Chord", "XSec_1", geom.wing_tip_chord)
+            vsp.SetParmVal(wing_id, "Sweep", "XSec_1", geom.wing_sweep_le)
+            vsp.SetParmVal(wing_id, "Dihedral", "XSec_1", geom.wing_dihedral)
+            vsp.SetParmVal(wing_id, "Twist", "XSec_1", -geom.wing_washout)
+            vsp.SetParmVal(wing_id, "X_Rel_Location", "XForm", geom.wing_le_fs)
+            vsp.SetParmVal(wing_id, "Z_Rel_Location", "XForm", geom.wing_le_wl)
+
+            # Elevon control surface
+            elevon_id = vsp.AddSubSurf(wing_id, vsp.SS_CONTROL)
+            vsp.SetSubSurfName(wing_id, elevon_id, "Elevon")
+            vsp.SetParmVal(wing_id, "EtaStart", f"SS_Control_{elevon_id}", 0.30)
+            vsp.SetParmVal(wing_id, "EtaEnd", f"SS_Control_{elevon_id}", 1.0)
+            vsp.SetParmVal(wing_id, "CFrac", f"SS_Control_{elevon_id}", 0.25)
+
+            # Canard
+            canard_id = vsp.AddGeom("WING", "")
+            vsp.SetGeomName(canard_id, "Canard")
+            vsp.SetParmVal(canard_id, "Span", "XSec_1", geom.canard_span / 2)
+            vsp.SetParmVal(canard_id, "Root_Chord", "XSec_1", geom.canard_root_chord)
+            vsp.SetParmVal(canard_id, "Tip_Chord", "XSec_1", geom.canard_tip_chord)
+            vsp.SetParmVal(canard_id, "Sweep", "XSec_1", geom.canard_sweep_le)
+            vsp.SetParmVal(canard_id, "X_Rel_Location", "XForm", geom.canard_le_fs)
+            vsp.SetParmVal(canard_id, "Z_Rel_Location", "XForm", geom.canard_le_wl)
+
+            # Winglets with rudder
+            winglet_id = vsp.AddGeom("WING", "")
+            vsp.SetGeomName(winglet_id, "Winglet")
+            vsp.SetParmVal(winglet_id, "Span", "XSec_1", geom.winglet_height)
+            vsp.SetParmVal(winglet_id, "Root_Chord", "XSec_1", geom.winglet_root_chord)
+            vsp.SetParmVal(winglet_id, "Tip_Chord", "XSec_1", geom.winglet_tip_chord)
+            vsp.SetParmVal(winglet_id, "Dihedral", "XSec_1", 90.0)
+            vsp.SetParmVal(winglet_id, "X_Rel_Location", "XForm",
+                           geom.wing_le_fs + geom.wing_span / 2 * math.tan(math.radians(geom.wing_sweep_le)))
+            vsp.SetParmVal(winglet_id, "Y_Rel_Location", "XForm", geom.wing_span / 2)
+
+            rudder_id = vsp.AddSubSurf(winglet_id, vsp.SS_CONTROL)
+            vsp.SetSubSurfName(winglet_id, rudder_id, "Rudder")
+            vsp.SetParmVal(winglet_id, "EtaStart", f"SS_Control_{rudder_id}", 0.0)
+            vsp.SetParmVal(winglet_id, "EtaEnd", f"SS_Control_{rudder_id}", 1.0)
+            vsp.SetParmVal(winglet_id, "CFrac", f"SS_Control_{rudder_id}", 0.30)
+
+            # Fuselage
+            fuse_id = vsp.AddGeom("FUSELAGE", "")
+            vsp.SetGeomName(fuse_id, "Fuselage")
+            vsp.SetParmVal(fuse_id, "Length", "Design", geom.fuselage_length)
+
+            vsp.WriteVSPFile(str(output_path))
+            logger.info("Native VSP3 model exported to %s", output_path)
+            return output_path
+
+        except Exception as e:
+            logger.warning("Failed to generate VSP3: %s, using fallback", e)
+            return self._export_vsp3_metadata_fallback(output_path)
+
+    def _export_vsp3_metadata_fallback(self, output_path: Path) -> Path:
+        """JSON metadata fallback when OpenVSP bindings unavailable."""
+        geom = config.geometry
+        metadata = {
+            "model_name": "Long-EZ",
+            "generator": "Open-EZ PDE",
+            "version": config.version,
+            "geometry": {
+                "wing": {
+                    "span_in": geom.wing_span,
+                    "root_chord_in": geom.wing_root_chord,
+                    "tip_chord_in": geom.wing_tip_chord,
+                    "sweep_deg": geom.wing_sweep_le,
+                    "dihedral_deg": geom.wing_dihedral,
+                    "washout_deg": geom.wing_washout,
+                },
+                "canard": {
+                    "span_in": geom.canard_span,
+                    "root_chord_in": geom.canard_root_chord,
+                    "tip_chord_in": geom.canard_tip_chord,
+                    "airfoil": "Roncz R1145MS",
+                },
+                "winglet": {
+                    "height_in": geom.winglet_height,
+                    "root_chord_in": geom.winglet_root_chord,
+                    "tip_chord_in": geom.winglet_tip_chord,
+                },
+            },
+            "control_surfaces": {
+                "elevon": {"span_fraction": [0.30, 1.0], "chord_fraction": 0.25, "max_deflection_deg": 20.0},
+                "rudder": {"span_fraction": [0.0, 1.0], "chord_fraction": 0.30, "max_deflection_deg": 25.0},
+            },
+        }
+        json_path = output_path.with_suffix(".vsp3.json")
+        json_path.write_text(json.dumps(metadata, indent=2))
+        logger.info("VSP3 metadata fallback exported to %s", json_path)
+        return json_path
+
     @staticmethod
     def _lifting_line_slope(aspect_ratio: float) -> float:
         """Approximate lift curve slope (per radian) using lifting-line theory."""

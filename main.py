@@ -19,7 +19,7 @@ sys.path.insert(0, str(project_root))
 
 from config import config  # noqa: E402
 from core.structures import CanardGenerator, WingGenerator  # noqa: E402
-from core.analysis import physics, VSPBridge  # noqa: E402
+from core.analysis import physics, VSPBridge, OpenVSPRunner  # noqa: E402
 from core.manufacturing import JigFactory  # noqa: E402
 
 
@@ -82,6 +82,11 @@ def run_analysis():
     vsp_dir.mkdir(parents=True, exist_ok=True)
     VSPBridge.export_vsp_script(vsp_dir / "model.vspscript")
     print("  OpenVSP script exported to output/VSP/")
+
+    # Export native VSP3 model with control surfaces
+    runner = OpenVSPRunner()
+    vsp3_path = runner.export_native_vsp3(vsp_dir / "long_ez.vsp3")
+    print(f"  Native VSP model: {vsp3_path}")
 
 
 def generate_manufacturing():
@@ -157,6 +162,28 @@ def generate_wing() -> None:
         wing.cut_spar_trough()
         wing.export_step(step_dir)
         print("  Main wing exported to output/STEP/")
+
+        # Wing segmentation for CNC machines
+        if config.manufacturing.auto_segment_wings:
+            gcode_dir = project_root / "output" / "GCODE"
+            dxf_dir = project_root / "output" / "DXF"
+            gcode_dir.mkdir(parents=True, exist_ok=True)
+            dxf_dir.mkdir(parents=True, exist_ok=True)
+
+            wing_segments = wing.generate_segments(
+                max_block_length=config.manufacturing.max_cnc_block_length
+            )
+
+            for i, segment in enumerate(wing_segments):
+                segment.generate_geometry()
+                segment.cut_spar_trough()
+                segment.export_gcode(gcode_dir)
+                segment.export_dxf(dxf_dir)
+
+            print(f"  Wing segmented into {len(wing_segments)} CNC blocks")
+            print(f"  G-code written to {gcode_dir}")
+            print(f"  DXF templates written to {dxf_dir}")
+
     except Exception as e:
         print(f"  Error generating wing: {e}")
 
