@@ -31,6 +31,31 @@ class FoamType(Enum):
     DIVINYCELL_H45 = "divinycell_h45"  # Structural foam - fuselage
 
 
+class BuildMethod(Enum):
+    """Fuselage construction method."""
+
+    BOW_FOAM = "bow_foam"  # Classic Rutan: flat slabs bowed into curves
+    CNC_MILLED = "cnc_milled"  # Modern: 5-axis CNC milled foam blocks
+
+
+class PropulsionType(Enum):
+    """Powerplant options."""
+
+    LYCOMING_O235 = "lycoming_o235"  # 115 HP gasoline (baseline)
+    LYCOMING_O320 = "lycoming_o320"  # 150 HP gasoline (performance)
+    ELECTRIC_LIFEPO4 = "electric_lifepo4"  # LiFePO4 battery electric
+    ELECTRIC_NMC = "electric_nmc"  # NMC battery electric (higher density)
+
+
+class GrainConstraint(Enum):
+    """Material grain/fiber orientation constraints for nesting."""
+
+    NONE = "none"  # No grain constraint
+    PARALLEL = "parallel"  # Grain must align with primary load path
+    PERPENDICULAR = "perpendicular"  # Grain perpendicular to load path
+    SPECIFIC = "specific"  # Specific angle required (see grain_angle)
+
+
 @dataclass
 class Ply:
     """Single composite ply definition."""
@@ -214,6 +239,80 @@ class ManufacturingParams:
             FoamType.DIVINYCELL_H45: 0.030,
         }
 
+    # === FUSELAGE BUILD SETTINGS ===
+    fuselage_build_method: BuildMethod = BuildMethod.BOW_FOAM
+    max_cnc_block_length: float = 48.0  # Max CNC machine width (inches)
+    auto_segment_wings: bool = True  # Auto-segment wings for CNC
+
+    # === STRONGBACK / JIG SETTINGS ===
+    strongback_table_width: float = 36.0  # Work table width (inches)
+    strongback_table_length: float = 240.0  # Work table length (inches)
+
+
+@dataclass
+class StrakeConfig:
+    """Strake geometry for wing-fuselage integration."""
+
+    # === GEOMETRY ===
+    fs_leading_edge: float = 110.0  # Forward extent (FS inches)
+    fs_trailing_edge: float = 145.0  # Blends into wing box
+    inboard_width: float = 8.0  # At fuselage junction (inches)
+    outboard_taper: float = 0.6  # Width reduction ratio at BL 23.3
+
+    # === TANKAGE ===
+    tank_volume_gal: float = 26.0  # Per side (fuel mode)
+    baffle_spacing: float = 6.0  # Anti-slosh baffle spacing (inches)
+
+    # === E-Z BATTERY CONVERSION ===
+    battery_cell_pitch: float = 2.625  # LiFePO4 prismatic spacing (inches)
+    battery_module_count: int = 8  # Modules per strake (16 total)
+    battery_cell_capacity_ah: float = 100.0  # Cell capacity
+    battery_cells_series: int = 16  # 16S = 48V nominal
+    battery_cells_parallel: int = 4  # 4P for capacity
+
+
+@dataclass
+class PropulsionConfig:
+    """Powerplant configuration for CG and firewall generation."""
+
+    propulsion_type: PropulsionType = PropulsionType.LYCOMING_O235
+
+    # === IC ENGINE DEFAULTS (O-235) ===
+    engine_mass_kg: float = 113.0  # 250 lb dry
+    engine_cg_arm_in: float = 8.0  # Forward of firewall
+    fuel_capacity_gal: float = 52.0  # Total fuel (26 gal per strake)
+    fuel_consumption_gph: float = 6.5  # Cruise consumption
+
+    # === ELECTRIC DEFAULTS (LiFePO4) ===
+    motor_mass_kg: float = 35.0  # EMRAX 228 MV
+    motor_power_kw: float = 100.0  # 134 hp continuous
+    battery_capacity_kwh: float = 25.6  # 16S4P configuration
+    battery_voltage_v: float = 51.2  # 16S nominal
+
+    @property
+    def is_electric(self) -> bool:
+        """Check if propulsion is electric."""
+        return self.propulsion_type in (
+            PropulsionType.ELECTRIC_LIFEPO4,
+            PropulsionType.ELECTRIC_NMC,
+        )
+
+    @property
+    def battery_energy_density_wh_kg(self) -> float:
+        """Energy density based on battery chemistry."""
+        if self.propulsion_type == PropulsionType.ELECTRIC_LIFEPO4:
+            return 150.0  # LiFePO4
+        elif self.propulsion_type == PropulsionType.ELECTRIC_NMC:
+            return 250.0  # NMC
+        return 0.0
+
+    @property
+    def battery_mass_kg(self) -> float:
+        """Computed battery mass from capacity and density."""
+        if not self.is_electric:
+            return 0.0
+        return (self.battery_capacity_kwh * 1000) / self.battery_energy_density_wh_kg
+
 
 @dataclass
 class AirfoilSelection:
@@ -273,6 +372,8 @@ class AircraftConfig:
     manufacturing: ManufacturingParams = field(default_factory=ManufacturingParams)
     airfoils: AirfoilSelection = field(default_factory=AirfoilSelection)
     compliance: ComplianceParams = field(default_factory=ComplianceParams)
+    strakes: StrakeConfig = field(default_factory=StrakeConfig)
+    propulsion: PropulsionConfig = field(default_factory=PropulsionConfig)
 
     # Project metadata
     project_name: str = "Open-EZ PDE"
