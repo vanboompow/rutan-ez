@@ -782,9 +782,8 @@ class OpenVSPRunner:
             cl_canard = cl_alpha_canard * alpha_rad * 0.9
 
             # Proper induced drag formulation: cd = cd0 + CL^2/(pi*e*AR)
-            # e = Oswald efficiency factor (0.80 typical for Long-EZ)
-            e_wing = 0.80
-            e_canard = 0.75
+            e_wing = config.geometry.wing_oswald_e
+            e_canard = config.geometry.canard_oswald_e
             cd0_wing = 0.008  # Profile drag coefficient (skin friction + pressure)
             cd0_canard = 0.010
             cd_wing = cd0_wing + cl_wing**2 / (math.pi * e_wing * ar_wing)

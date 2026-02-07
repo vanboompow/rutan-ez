@@ -100,6 +100,7 @@ class GeometricParams:
     wing_dihedral: float = -4.5  # Negative = anhedral (degrees)
     wing_washout: float = 1.0  # Tip washout (degrees)
     wing_incidence: float = 0.0  # Relative to longerons (degrees)
+    wing_oswald_e: float = 0.80  # Oswald efficiency factor (typical for tapered wing)
 
     # === CANARD (Roncz R1145MS - SAFETY CRITICAL) ===
     canard_span: float = 147.0  # Total span (12.25 ft)
@@ -107,6 +108,7 @@ class GeometricParams:
     canard_tip_chord: float = 13.5  # Tip chord
     canard_sweep_le: float = 13.5  # Leading edge sweep (degrees)
     canard_incidence: float = -1.5  # Relative to longerons (degrees)
+    canard_oswald_e: float = 0.75  # Oswald efficiency factor (lower AR, less efficient)
 
     # === FUSELAGE STATIONS (FS) ===
     fs_nose: float = 0.0  # Nose reference
