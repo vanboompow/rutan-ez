@@ -2,10 +2,10 @@
 A2: Lift Curve Slope Validation Against Anderson's Theory
 ==========================================================
 
-Tests the lift curve slope calculation against Fundamentals of Aerodynamics
-(Anderson, 6th ed.) finite-wing correction with sweep.
+Tests the sweep-corrected lift curve slope calculation against Fundamentals
+of Aerodynamics (Anderson, 6th ed.) finite-wing correction.
 
-For a swept finite wing:
+For a swept finite wing (Anderson eq. 5.69):
     a = (2 * pi * AR) / (2 + sqrt(4 + AR^2 * (1 + tan^2(sweep_c/2) / beta^2)))
 
 where:
@@ -13,14 +13,9 @@ where:
     sweep_c/2 = sweep at half-chord (NOT leading-edge sweep)
     beta^2 = 1 - M^2 (approximately 1.0 for low-speed)
 
-The current code in core/analysis.py:205 uses the simplified formula WITHOUT
-sweep correction:
-    a = 2 * pi * AR / (2 + sqrt(4 + AR^2))
-
-This overestimates the lift curve slope for the swept Long-EZ wing,
-yielding ~4.9/rad instead of the correct ~4.2/rad.
-
-These tests should FAIL with the current code and PASS after the fix.
+The code in core/analysis.py applies this sweep-corrected formula,
+converting LE sweep to half-chord sweep via:
+    tan(sweep_c/2) = tan(sweep_LE) - 2*c_r*(1-lambda) / (b*(1+lambda))
 """
 
 import sys

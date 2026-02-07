@@ -112,7 +112,7 @@ class OpenVSPAdapter:
 
         # Induced drag parameters
         ar = config.geometry.wing_aspect_ratio
-        e = 0.80  # Oswald efficiency factor
+        e = config.geometry.wing_oswald_e
 
         # Stall angle where linear CL reaches cl_max
         alpha_stall = cl_max / cl_slope if cl_slope > 0 else 90.0
