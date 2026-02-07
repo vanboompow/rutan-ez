@@ -129,7 +129,10 @@ class Airfoil:
         Returns:
             New Airfoil instance with washout applied
         """
-        theta = np.radians(angle_deg)
+        # Positive washout = LE down = clockwise rotation when viewed
+        # from the right wing tip. CW rotation requires negating theta
+        # in the standard rotation matrix.
+        theta = np.radians(-angle_deg)  # Negate for CW rotation
         cos_t, sin_t = np.cos(theta), np.sin(theta)
 
         # Rotate about quarter-chord (x=0.25)
@@ -171,7 +174,7 @@ class Airfoil:
             if x_new[i] > reflex_start:
                 # Linear ramp from reflex_start to trailing edge
                 t = (x_new[i] - reflex_start) / (1.0 - reflex_start)
-                y_new[i] += reflex_amount * t * (1 - t) * 4  # Parabolic blend
+                y_new[i] += reflex_amount * t  # Linear ramp, not parabolic
 
         new_coords = AirfoilCoordinates(
             name=f"{self.name}_reflex_{percent}pct",
@@ -179,6 +182,49 @@ class Airfoil:
             y_upper=y_new[: len(y_new) // 2],
             x_lower=x_new[len(x_new) // 2 :][::-1],
             y_lower=y_new[len(y_new) // 2 :][::-1],
+        )
+        return Airfoil(new_coords, self._n_points, smooth=False)
+
+    def blend(self, other: "Airfoil", fraction: float) -> "Airfoil":
+        """
+        Linearly blend this airfoil with another at the given fraction.
+
+        Creates a smooth interpolation between two airfoil shapes along
+        the span, eliminating the discontinuity from binary switching.
+
+        Args:
+            other: Target airfoil to blend toward
+            fraction: Blend fraction (0.0 = self, 1.0 = other)
+
+        Returns:
+            New Airfoil with blended coordinates
+        """
+        fraction = max(0.0, min(1.0, fraction))
+
+        # Ensure both airfoils have the same number of points
+        if len(self._x) != len(other._x):
+            # Resample other to match self's point count
+            from scipy.interpolate import interp1d
+            t_self = np.linspace(0, 1, len(self._x))
+            t_other = np.linspace(0, 1, len(other._x))
+            fx = interp1d(t_other, other._x, kind='linear')
+            fy = interp1d(t_other, other._y, kind='linear')
+            other_x = fx(t_self)
+            other_y = fy(t_self)
+        else:
+            other_x = other._x
+            other_y = other._y
+
+        x_blend = (1 - fraction) * self._x + fraction * other_x
+        y_blend = (1 - fraction) * self._y + fraction * other_y
+
+        half = len(x_blend) // 2
+        new_coords = AirfoilCoordinates(
+            name=f"{self.name}_blend_{fraction:.2f}",
+            x_upper=x_blend[:half],
+            y_upper=y_blend[:half],
+            x_lower=x_blend[half:][::-1],
+            y_lower=y_blend[half:][::-1],
         )
         return Airfoil(new_coords, self._n_points, smooth=False)
 

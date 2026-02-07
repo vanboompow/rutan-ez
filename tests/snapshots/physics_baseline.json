@@ -3,10 +3,10 @@
     "cm_at_trim": -0.013250000000000001
   },
   "lift_curve_slope": {
-    "cl_per_deg": 0.095
+    "cl_per_deg": 0.0783517454218679
   },
   "spar_tip_deflection": {
-    "tip_deflection_in": 237785.06333002937,
-    "spar_stress_psi": 6089965.397923875
+    "tip_deflection_in": 89169.43714876103,
+    "spar_stress_psi": 3044982.6989619373
   }
 }

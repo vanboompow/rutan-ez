@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Sequence
@@ -69,9 +70,15 @@ class OpenVSPAdapter:
         return target
 
     def _cl_slope_per_deg(self) -> float:
-        """Estimate lift-curve slope (CL/deg) with washout sensitivity."""
+        """Estimate lift-curve slope (CL/deg) with finite-wing and washout correction.
 
-        base = 0.1  # per degree for slender, low-speed wings
+        Uses lifting-line theory: a = 2*pi*AR / (AR + 2) converted to per-degree,
+        then applies a washout penalty.
+        """
+        ar = config.geometry.wing_aspect_ratio
+        # Lifting-line slope in per-radian, then convert to per-degree
+        a_rad = (2.0 * math.pi * ar) / (ar + 2.0)
+        base = a_rad * (math.pi / 180.0)
         washout_penalty = 0.005 * config.geometry.wing_washout
         return max(base - washout_penalty, 0.06)
 
@@ -85,19 +92,45 @@ class OpenVSPAdapter:
         wetted_area_ft2 = config.geometry.wing_area + config.geometry.canard_area
         return 0.016 + 1e-4 * wetted_area_ft2
 
-    def run_vspaero(self, alphas: Sequence[float] | None = None) -> List[AeroPolar]:
-        """Generate aerodynamic polars for a set of angles of attack."""
+    def run_vspaero(
+        self,
+        alphas: Sequence[float] | None = None,
+        cl_max: float = 1.4,
+    ) -> List[AeroPolar]:
+        """Generate aerodynamic polars for a set of angles of attack.
+
+        Args:
+            alphas: Sequence of angles of attack in degrees.
+            cl_max: Maximum lift coefficient before stall rolloff (default 1.4
+                    for Long-EZ airfoils).
+        """
 
         alphas = list(alphas) if alphas is not None else [-4, 0, 4, 8, 12]
         cl_slope = self._cl_slope_per_deg()
         cm0 = self._cm_reflex_offset() - 0.002 * config.geometry.canard_incidence
         cd0 = self._drag_offset()
 
+        # Induced drag parameters
+        ar = config.geometry.wing_aspect_ratio
+        e = 0.80  # Oswald efficiency factor
+
+        # Stall angle where linear CL reaches cl_max
+        alpha_stall = cl_max / cl_slope if cl_slope > 0 else 90.0
+
         results: List[AeroPolar] = []
         for alpha in alphas:
-            cl = cl_slope * alpha
+            cl_linear = cl_slope * alpha
+
+            # Viterna post-stall model: gradual rolloff after cl_max
+            if cl_linear > cl_max:
+                excess = alpha - alpha_stall
+                cl = cl_max - 0.05 * excess ** 2
+            else:
+                cl = cl_linear
+
             cm = cm0 - 0.0008 * alpha
-            cd = cd0 + 0.01 * (cl**2) + 0.0004 * abs(alpha)
+            # Proper induced drag: CD_i = CL^2 / (pi * e * AR)
+            cd = cd0 + cl ** 2 / (math.pi * e * ar)
             results.append(AeroPolar(alpha_deg=alpha, cl=cl, cm=cm, cd=cd))
         return results
 

@@ -140,11 +140,11 @@ class PhysicsEngine:
 
     def calculate_mac(self) -> Tuple[float, float]:
         """
-        Calculate Mean Aerodynamic Chord and its location.
+        Calculate Mean Aerodynamic Chord and its location for strake+wing planform.
 
-        For a tapered wing:
-        MAC = (2/3) * Cr * (1 + lambda + lambda^2) / (1 + lambda)
-        where lambda = Ct/Cr (taper ratio)
+        Computes MAC piecewise: strake segment + outer wing segment, then
+        combines using area-weighted averaging. The strake contributes
+        significant area near the root and shifts the overall MAC forward.
 
         Returns:
             Tuple of (MAC length, MAC leading edge FS location)
@@ -153,16 +153,56 @@ class PhysicsEngine:
         ct = self.geo.wing_tip_chord
         taper = ct / cr
 
-        # MAC length
-        mac = (2 / 3) * cr * (1 + taper + taper**2) / (1 + taper)
+        # === Outer wing segment (BL 23.3 to tip) ===
+        # Standard trapezoidal MAC formula
+        mac_wing = (2 / 3) * cr * (1 + taper + taper**2) / (1 + taper)
 
-        # Spanwise location of MAC (from root)
-        y_mac = (self.geo.wing_span / 6) * (1 + 2 * taper) / (1 + taper)
+        # Spanwise location of wing MAC (from root, BL 23.3)
+        semi_span = self.geo.wing_span / 2
+        y_mac_wing = (semi_span / 3) * (1 + 2 * taper) / (1 + taper)
 
-        # Leading edge location of MAC (accounting for sweep)
-        x_mac_le = self.geo.fs_wing_le + y_mac * math.tan(
+        # Leading edge location of wing MAC (accounting for sweep)
+        x_mac_le_wing = self.geo.fs_wing_le + y_mac_wing * math.tan(
             math.radians(self.geo.wing_sweep_le)
         )
+
+        # Wing planform area (sq in) for one side
+        wing_avg_chord = (cr + ct) / 2
+        s_wing_side = wing_avg_chord * semi_span  # sq in, one side
+
+        # === Strake segment ===
+        # The strakes extend from the fuselage to BL 23.3, contributing
+        # significant lifting area near the root.
+        strake_cfg = config.strakes if hasattr(config, 'strakes') else None
+        if strake_cfg is not None:
+            strake_span = 23.3  # BL at wing root junction
+            strake_chord_inboard = strake_cfg.fs_trailing_edge - strake_cfg.fs_leading_edge
+            strake_chord_outboard = cr  # Blends into wing root
+            strake_avg_chord = (strake_chord_inboard + strake_chord_outboard) / 2
+            s_strake_side = strake_avg_chord * strake_span  # sq in, one side
+
+            # Strake MAC (trapezoidal)
+            strake_taper = strake_chord_outboard / strake_chord_inboard if strake_chord_inboard > 0 else 1.0
+            mac_strake = (
+                (2 / 3) * strake_chord_inboard
+                * (1 + strake_taper + strake_taper**2)
+                / (1 + strake_taper)
+            )
+
+            # Strake MAC LE location (strake starts at fs_leading_edge)
+            y_mac_strake = (strake_span / 3) * (1 + 2 * strake_taper) / (1 + strake_taper)
+            x_mac_le_strake = strake_cfg.fs_leading_edge  # Minimal sweep on strake
+
+            # === Area-weighted combination ===
+            s_total = s_wing_side + s_strake_side
+            mac = (mac_wing * s_wing_side + mac_strake * s_strake_side) / s_total
+            x_mac_le = (
+                x_mac_le_wing * s_wing_side + x_mac_le_strake * s_strake_side
+            ) / s_total
+        else:
+            # Fallback: simple trapezoidal (no strake config)
+            mac = mac_wing
+            x_mac_le = x_mac_le_wing
 
         return mac, x_mac_le
 
@@ -194,21 +234,56 @@ class PhysicsEngine:
         # Canard AC (simpler - less sweep)
         ac_canard = self.geo.fs_canard_le + (self.geo.canard_root_chord * 0.25)
 
-        # Lift Curve Slopes using lifting line theory
-        # a = 2 * pi * AR / (2 + sqrt(4 + AR^2))
+        # Lift Curve Slopes using lifting line theory with sweep correction
+        # Anderson eq. 5.69:
+        # a = 2*pi*AR / (2 + sqrt(4 + AR^2 * (1 + tan^2(sweep_half) / beta^2)))
+        # where sweep_half is sweep at half-chord line, beta^2 = 1 - M^2
         ar_wing = self.geo.wing_aspect_ratio
 
         # Calculate canard aspect ratio
         ar_canard = (self.geo.canard_span / 12) ** 2 / s_canard  # span in feet
 
-        # Lift curve slopes (per radian)
-        a_wing = 2 * math.pi * ar_wing / (2 + math.sqrt(4 + ar_wing**2))
-        a_canard = 2 * math.pi * ar_canard / (2 + math.sqrt(4 + ar_canard**2))
+        # Half-chord sweep from LE sweep and taper ratio
+        # tan(sweep_c/2) = tan(sweep_LE) - 2*cr*(1-lambda)/(b*(1+lambda))
+        taper_wing = self.geo.wing_tip_chord / self.geo.wing_root_chord
+        tan_sweep_le_wing = math.tan(math.radians(self.geo.wing_sweep_le))
+        tan_sweep_half_wing = tan_sweep_le_wing - (
+            2 * self.geo.wing_root_chord * (1 - taper_wing)
+            / (self.geo.wing_span * (1 + taper_wing))
+        )
 
-        # Canard efficiency factor (accounts for downwash on wing)
-        # For canard config, the canard is in clean air, but induces
-        # upwash/downwash on the wing. Typical efficiency is 0.85-0.95.
-        eta_canard = 0.90
+        taper_canard = self.geo.canard_tip_chord / self.geo.canard_root_chord
+        tan_sweep_le_canard = math.tan(math.radians(self.geo.canard_sweep_le))
+        tan_sweep_half_canard = tan_sweep_le_canard - (
+            2 * self.geo.canard_root_chord * (1 - taper_canard)
+            / (self.geo.canard_span * (1 + taper_canard))
+        )
+
+        # beta^2 = 1 - M^2 (approx 1.0 for low-speed, M < 0.25)
+        beta_sq = 1.0
+
+        # Lift curve slopes (per radian) with sweep correction
+        a_wing = (
+            2 * math.pi * ar_wing
+            / (2 + math.sqrt(4 + ar_wing**2 * (1 + tan_sweep_half_wing**2 / beta_sq)))
+        )
+        a_canard = (
+            2 * math.pi * ar_canard
+            / (2 + math.sqrt(4 + ar_canard**2 * (1 + tan_sweep_half_canard**2 / beta_sq)))
+        )
+
+        # Canard efficiency factor (B3 fix)
+        # For a canard configuration, the canard sees clean freestream air
+        # (eta >= 1.0 for lift production). The wing sees canard downwash:
+        # epsilon = 2*CL_c / (pi * AR_c)
+        # Net effect depends on vertical separation. For the Long-EZ with
+        # the canard mounted at fuselage top, eta ~0.95-1.05.
+        # Calculate from geometry rather than hardcoding.
+        canard_cl_cruise = 0.5  # Typical cruise CL for canard
+        downwash_angle = 2 * canard_cl_cruise / (math.pi * ar_canard)
+        # Wing sees reduced angle of attack due to canard downwash
+        # eta accounts for this interaction
+        eta_canard = 1.0 - downwash_angle * 0.5  # ~0.95-1.0
 
         # Calculate NP
         numerator = (a_wing * s_wing * ac_wing) + (
@@ -270,6 +345,43 @@ class PhysicsEngine:
     def get_weight_balance(self) -> WeightBalance:
         """Get current weight & balance state."""
         return self._weight_balance
+
+    @staticmethod
+    def calculate_reynolds(velocity_kts: float = 160.0, chord_in: float = 50.0,
+                           altitude_ft: float = 8000.0) -> float:
+        """Calculate Reynolds number at given flight conditions.
+
+        Re = rho * V * c / mu
+
+        Args:
+            velocity_kts: Airspeed in knots
+            chord_in: Chord length in inches
+            altitude_ft: Pressure altitude in feet
+
+        Returns:
+            Reynolds number (dimensionless)
+        """
+        # Standard atmosphere at 8000 ft
+        rho = 0.001869  # slug/ft³
+        mu = 3.637e-7  # slug/(ft·s)
+
+        # Convert units
+        velocity_fps = velocity_kts * 1.6878  # knots to ft/s
+        chord_ft = chord_in / 12.0  # inches to feet
+
+        return rho * velocity_fps * chord_ft / mu
+
+    @staticmethod
+    def skin_friction_coefficient(reynolds: float) -> float:
+        """Turbulent flat-plate skin friction coefficient.
+
+        Cf = 0.455 / (log10(Re))^2.58
+
+        Reference: Schlichting boundary layer theory
+        """
+        if reynolds <= 0:
+            return 0.0
+        return 0.455 / (math.log10(reynolds) ** 2.58)
 
     def check_canard_stall_priority(self) -> Tuple[bool, str]:
         """
@@ -669,9 +781,14 @@ class OpenVSPRunner:
             cl_wing = cl_alpha_wing * alpha_rad
             cl_canard = cl_alpha_canard * alpha_rad * 0.9
 
-            # Simple induced + profile drag model
-            cd_wing = 0.02 + 0.045 * cl_wing**2
-            cd_canard = 0.018 + 0.060 * cl_canard**2
+            # Proper induced drag formulation: cd = cd0 + CL^2/(pi*e*AR)
+            # e = Oswald efficiency factor (0.80 typical for Long-EZ)
+            e_wing = 0.80
+            e_canard = 0.75
+            cd0_wing = 0.008  # Profile drag coefficient (skin friction + pressure)
+            cd0_canard = 0.010
+            cd_wing = cd0_wing + cl_wing**2 / (math.pi * e_wing * ar_wing)
+            cd_canard = cd0_canard + cl_canard**2 / (math.pi * e_canard * ar_canard)
 
             total_cl = (cl_wing * wing_area + cl_canard * canard_area) / total_area
             total_cd = (cd_wing * wing_area + cd_canard * canard_area) / total_area

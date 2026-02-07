@@ -127,11 +127,8 @@ class WingGenerator(FoamCore):
             # Linear washout distribution
             twist = eta * self.washout
 
-            # Interpolate airfoil (simple linear blend for now)
-            if eta < 0.5:
-                airfoil = self.root_airfoil
-            else:
-                airfoil = self.tip_airfoil
+            # Smooth airfoil interpolation along span using linear blend
+            airfoil = self.root_airfoil.blend(self.tip_airfoil, eta)
 
             # Apply washout to airfoil
             if abs(twist) > 0.001:
@@ -329,16 +326,9 @@ class WingGenerator(FoamCore):
             washout_inboard = eta_inboard * self.washout
             washout_outboard = eta_outboard * self.washout
 
-            # Interpolate airfoils for this segment
-            if eta_inboard < 0.5:
-                inboard_airfoil = self.root_airfoil
-            else:
-                inboard_airfoil = self.tip_airfoil
-
-            if eta_outboard < 0.5:
-                outboard_airfoil = self.root_airfoil
-            else:
-                outboard_airfoil = self.tip_airfoil
+            # Smooth airfoil interpolation for this segment
+            inboard_airfoil = self.root_airfoil.blend(self.tip_airfoil, eta_inboard)
+            outboard_airfoil = self.root_airfoil.blend(self.tip_airfoil, eta_outboard)
 
             # Apply washout to segment airfoils
             if abs(washout_inboard) > 0.001:

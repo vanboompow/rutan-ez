@@ -1,0 +1,29 @@
+{
+  "source": "RAF CP-29/CP-31, Rutan Aircraft Factory",
+  "aircraft": "Long-EZ Model 61",
+  "weights": {
+    "empty_weight_lb": 850,
+    "empty_weight_range_lb": [800, 920],
+    "max_gross_weight_lb": 1425,
+    "useful_load_lb": 575
+  },
+  "stability": {
+    "cg_range_fwd_fs": 99.0,
+    "cg_range_aft_fs": 104.0,
+    "neutral_point_fs": 108.0,
+    "neutral_point_range_fs": [106, 110],
+    "static_margin_pct_range": [8, 15]
+  },
+  "performance": {
+    "cruise_speed_kts": 160,
+    "stall_speed_kts": 56,
+    "range_nm": 800,
+    "cruise_altitude_ft": 8000
+  },
+  "geometry": {
+    "wing_span_ft": 26.4,
+    "wing_area_sqft": 94.2,
+    "canard_area_sqft": 15.6,
+    "aspect_ratio": 7.3
+  }
+}
