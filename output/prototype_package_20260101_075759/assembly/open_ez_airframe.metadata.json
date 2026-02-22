@@ -1,0 +1,16 @@
+{
+  "artifact": "open_ez_airframe.step",
+  "artifact_type": "STEP",
+  "generated_at": "2026-01-01T13:58:01.294050Z",
+  "revision": "74a0d6c",
+  "config_hash": "2744a2b0bc6021c63cf62a2516399c443c452649a4640d742691c5bde3b0cb5f",
+  "contributor": "unknown",
+  "component": {
+    "name": "open_ez_airframe",
+    "description": "Complete airframe assembly"
+  },
+  "provenance": {
+    "toolchain": "Open-EZ PDE",
+    "automated": true
+  }
+}

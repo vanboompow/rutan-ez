@@ -1,0 +1,18 @@
+{
+  "artifact": "canard_core_root.dxf",
+  "artifact_type": "DXF",
+  "generated_at": "2026-01-01T15:33:57.889828Z",
+  "revision": "27a8bca",
+  "config_hash": "2744a2b0bc6021c63cf62a2516399c443c452649a4640d742691c5bde3b0cb5f",
+  "contributor": "unknown",
+  "component": {
+    "name": "canard_core",
+    "description": "Roncz R1145MS canard foam core",
+    "airfoil": "roncz_r1145ms",
+    "safety_mandate": "Rain-safe canard per CP updates"
+  },
+  "provenance": {
+    "toolchain": "Open-EZ PDE",
+    "automated": true
+  }
+}
