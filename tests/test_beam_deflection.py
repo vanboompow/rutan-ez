@@ -39,17 +39,14 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.modules.setdefault("cadquery", MagicMock())
 sys.modules.setdefault("OCP", MagicMock())
 
-import math
-import pytest
-
 
 class TestPointLoadDeflection:
     """Verify existing analyze_cantilever against analytical solutions."""
 
     # Known spar section from config defaults
-    WIDTH = 3.0        # inches
-    HEIGHT = 0.153     # 17 plies * 0.009 in/ply
-    MODULUS = 2.8e6    # psi (UNI glass bending modulus)
+    WIDTH = 3.0  # inches
+    HEIGHT = 0.153  # 17 plies * 0.009 in/ply
+    MODULUS = 2.8e6  # psi (UNI glass bending modulus)
 
     @property
     def inertia(self) -> float:
@@ -71,20 +68,23 @@ class TestPointLoadDeflection:
         )
         adapter = BeamFEAAdapter(section=section)
 
-        P = 450.0   # lbf
-        L = 79.2     # inches (half-span)
+        P = 450.0  # lbf
+        L = 79.2  # inches (half-span)
 
         result = adapter.analyze_cantilever(span_in=L, tip_load_lbf=P)
 
         # Analytical solution
-        I = self.inertia
-        expected_deflection = (P * L**3) / (3 * self.MODULUS * I)
+        inertia = self.inertia
+        expected_deflection = (P * L**3) / (3 * self.MODULUS * inertia)
 
-        assert abs(result.tip_deflection_in - expected_deflection) / expected_deflection < 0.001, (
+        assert (
+            abs(result.tip_deflection_in - expected_deflection) / expected_deflection
+            < 0.001
+        ), (
             f"Point load deflection mismatch:\n"
             f"  Computed: {result.tip_deflection_in:.4f} in\n"
             f"  Expected: {expected_deflection:.4f} in\n"
-            f"  Error: {abs(result.tip_deflection_in - expected_deflection)/expected_deflection*100:.2f}%"
+            f"  Error: {abs(result.tip_deflection_in - expected_deflection) / expected_deflection * 100:.2f}%"
         )
 
     def test_known_cantilever_stress(self):
@@ -106,9 +106,9 @@ class TestPointLoadDeflection:
 
         result = adapter.analyze_cantilever(span_in=L, tip_load_lbf=P)
 
-        I = self.inertia
+        inertia = self.inertia
         c = self.HEIGHT / 2
-        expected_stress = (P * L * c) / I
+        expected_stress = (P * L * c) / inertia
 
         assert abs(result.max_stress_psi - expected_stress) / expected_stress < 0.001, (
             f"Max stress mismatch:\n"
@@ -166,7 +166,7 @@ class TestDistributedLoadDeflection:
         )
         adapter = BeamFEAAdapter(section=section)
 
-        assert hasattr(adapter, 'analyze_distributed'), (
+        assert hasattr(adapter, "analyze_distributed"), (
             "BeamFEAAdapter is missing 'analyze_distributed' method. "
             "Wing spar analysis requires distributed load capability: "
             "delta = w * L^4 / (8 * E * I)"
@@ -189,16 +189,19 @@ class TestDistributedLoadDeflection:
         )
         adapter = BeamFEAAdapter(section=section)
 
-        L = 79.2     # inches (half-span)
+        L = 79.2  # inches (half-span)
         P_total = 450.0  # total distributed load (lbf)
         w = P_total / L  # lbf/in
 
         result = adapter.analyze_distributed(span_in=L, total_load_lbf=P_total)
 
-        I = self.inertia
-        expected_deflection = (w * L**4) / (8 * self.MODULUS * I)
+        inertia = self.inertia
+        expected_deflection = (w * L**4) / (8 * self.MODULUS * inertia)
 
-        assert abs(result.tip_deflection_in - expected_deflection) / expected_deflection < 0.01, (
+        assert (
+            abs(result.tip_deflection_in - expected_deflection) / expected_deflection
+            < 0.01
+        ), (
             f"Distributed load deflection mismatch:\n"
             f"  Computed: {result.tip_deflection_in:.4f} in\n"
             f"  Expected: {expected_deflection:.4f} in"
@@ -257,7 +260,9 @@ class TestBeamSectionProperties:
         from config import config
 
         adapter = BeamFEAAdapter()
-        expected_height = config.materials.spar_cap_plies * config.materials.uni_ply_thickness
+        expected_height = (
+            config.materials.spar_cap_plies * config.materials.uni_ply_thickness
+        )
 
         assert abs(adapter.section.height_in - expected_height) < 1e-6, (
             f"Spar height should be {expected_height} "

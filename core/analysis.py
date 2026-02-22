@@ -12,7 +12,7 @@ Key Metrics:
 """
 
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 import json
@@ -125,18 +125,53 @@ class PhysicsEngine:
         self._init_standard_weights()
 
     def _init_standard_weights(self):
-        """Initialize standard Long-EZ weight items."""
-        # Empty weight components (typical Long-EZ)
-        self._weight_balance.add_item("Wing Structure", 85.0, 140.0, "fixed")
-        self._weight_balance.add_item("Canard", 25.0, 45.0, "fixed")
-        self._weight_balance.add_item("Fuselage", 120.0, 100.0, "fixed")
-        self._weight_balance.add_item("Landing Gear", 45.0, 130.0, "fixed")
-        self._weight_balance.add_item("Engine (O-235)", 250.0, 195.0, "fixed")
-        self._weight_balance.add_item("Prop & Spinner", 25.0, 205.0, "fixed")
-        self._weight_balance.add_item("Engine Accessories", 30.0, 190.0, "fixed")
-        self._weight_balance.add_item("Electrical", 25.0, 165.0, "fixed")
-        self._weight_balance.add_item("Instruments", 15.0, 75.0, "fixed")
-        self._weight_balance.add_item("Interior", 20.0, 95.0, "fixed")
+        """Initialize weight items from SSOT config and propulsion factory."""
+        sw = config.structural_weights
+
+        # Structural weights from config
+        self._weight_balance.add_item(
+            "Wing Structure", sw.wing_weight_lb, sw.wing_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Canard", sw.canard_weight_lb, sw.canard_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Fuselage", sw.fuselage_weight_lb, sw.fuselage_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Landing Gear", sw.landing_gear_weight_lb, sw.landing_gear_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Electrical", sw.electrical_weight_lb, sw.electrical_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Instruments", sw.instruments_weight_lb, sw.instruments_arm_in, "fixed"
+        )
+        self._weight_balance.add_item(
+            "Interior", sw.interior_weight_lb, sw.interior_arm_in, "fixed"
+        )
+
+        # Propulsion weights from factory (engine, prop, accessories)
+        try:
+            from .systems import get_propulsion_system
+
+            propulsion = get_propulsion_system()
+            for item in propulsion.get_weight_items():
+                self._weight_balance.add_item(
+                    item.name, item.weight_lb, item.arm_in, "propulsion"
+                )
+        except (ImportError, Exception):
+            # Fallback: use hardcoded O-235 weights if propulsion module unavailable
+            fs_firewall = config.geometry.fs_firewall
+            self._weight_balance.add_item(
+                "Engine (O-235)", 250.0, fs_firewall + 15.0, "propulsion"
+            )
+            self._weight_balance.add_item(
+                "Prop & Spinner", 25.0, fs_firewall + 25.0, "propulsion"
+            )
+            self._weight_balance.add_item(
+                "Engine Accessories", 30.0, fs_firewall + 10.0, "propulsion"
+            )
 
     def calculate_mac(self) -> Tuple[float, float]:
         """
@@ -173,24 +208,33 @@ class PhysicsEngine:
         # === Strake segment ===
         # The strakes extend from the fuselage to BL 23.3, contributing
         # significant lifting area near the root.
-        strake_cfg = config.strakes if hasattr(config, 'strakes') else None
+        strake_cfg = config.strakes if hasattr(config, "strakes") else None
         if strake_cfg is not None:
             strake_span = 23.3  # BL at wing root junction
-            strake_chord_inboard = strake_cfg.fs_trailing_edge - strake_cfg.fs_leading_edge
+            strake_chord_inboard = (
+                strake_cfg.fs_trailing_edge - strake_cfg.fs_leading_edge
+            )
             strake_chord_outboard = cr  # Blends into wing root
             strake_avg_chord = (strake_chord_inboard + strake_chord_outboard) / 2
             s_strake_side = strake_avg_chord * strake_span  # sq in, one side
 
             # Strake MAC (trapezoidal)
-            strake_taper = strake_chord_outboard / strake_chord_inboard if strake_chord_inboard > 0 else 1.0
+            strake_taper = (
+                strake_chord_outboard / strake_chord_inboard
+                if strake_chord_inboard > 0
+                else 1.0
+            )
             mac_strake = (
-                (2 / 3) * strake_chord_inboard
+                (2 / 3)
+                * strake_chord_inboard
                 * (1 + strake_taper + strake_taper**2)
                 / (1 + strake_taper)
             )
 
             # Strake MAC LE location (strake starts at fs_leading_edge)
-            y_mac_strake = (strake_span / 3) * (1 + 2 * strake_taper) / (1 + strake_taper)
+            _y_mac_strake = (
+                (strake_span / 3) * (1 + 2 * strake_taper) / (1 + strake_taper)
+            )
             x_mac_le_strake = strake_cfg.fs_leading_edge  # Minimal sweep on strake
 
             # === Area-weighted combination ===
@@ -231,8 +275,22 @@ class PhysicsEngine:
         mac_wing, x_mac_le_wing = self.calculate_mac()
         ac_wing = x_mac_le_wing + 0.25 * mac_wing
 
-        # Canard AC (simpler - less sweep)
-        ac_canard = self.geo.fs_canard_le + (self.geo.canard_root_chord * 0.25)
+        # Canard AC at 25% MAC with sweep offset (matching wing pattern)
+        canard_taper = self.geo.canard_tip_chord / self.geo.canard_root_chord
+        mac_canard = (
+            (2 / 3)
+            * self.geo.canard_root_chord
+            * (1 + canard_taper + canard_taper**2)
+            / (1 + canard_taper)
+        )
+        canard_semi_span = self.geo.canard_span / 2
+        y_mac_canard = (
+            (canard_semi_span / 3) * (1 + 2 * canard_taper) / (1 + canard_taper)
+        )
+        x_mac_le_canard = self.geo.fs_canard_le + y_mac_canard * math.tan(
+            math.radians(self.geo.canard_sweep_le)
+        )
+        ac_canard = x_mac_le_canard + 0.25 * mac_canard
 
         # Lift Curve Slopes using lifting line theory with sweep correction
         # Anderson eq. 5.69:
@@ -248,14 +306,18 @@ class PhysicsEngine:
         taper_wing = self.geo.wing_tip_chord / self.geo.wing_root_chord
         tan_sweep_le_wing = math.tan(math.radians(self.geo.wing_sweep_le))
         tan_sweep_half_wing = tan_sweep_le_wing - (
-            2 * self.geo.wing_root_chord * (1 - taper_wing)
+            2
+            * self.geo.wing_root_chord
+            * (1 - taper_wing)
             / (self.geo.wing_span * (1 + taper_wing))
         )
 
         taper_canard = self.geo.canard_tip_chord / self.geo.canard_root_chord
         tan_sweep_le_canard = math.tan(math.radians(self.geo.canard_sweep_le))
         tan_sweep_half_canard = tan_sweep_le_canard - (
-            2 * self.geo.canard_root_chord * (1 - taper_canard)
+            2
+            * self.geo.canard_root_chord
+            * (1 - taper_canard)
             / (self.geo.canard_span * (1 + taper_canard))
         )
 
@@ -264,26 +326,33 @@ class PhysicsEngine:
 
         # Lift curve slopes (per radian) with sweep correction
         a_wing = (
-            2 * math.pi * ar_wing
+            2
+            * math.pi
+            * ar_wing
             / (2 + math.sqrt(4 + ar_wing**2 * (1 + tan_sweep_half_wing**2 / beta_sq)))
         )
         a_canard = (
-            2 * math.pi * ar_canard
-            / (2 + math.sqrt(4 + ar_canard**2 * (1 + tan_sweep_half_canard**2 / beta_sq)))
+            2
+            * math.pi
+            * ar_canard
+            / (
+                2
+                + math.sqrt(4 + ar_canard**2 * (1 + tan_sweep_half_canard**2 / beta_sq))
+            )
         )
 
-        # Canard efficiency factor (B3 fix)
-        # For a canard configuration, the canard sees clean freestream air
-        # (eta >= 1.0 for lift production). The wing sees canard downwash:
-        # epsilon = 2*CL_c / (pi * AR_c)
-        # Net effect depends on vertical separation. For the Long-EZ with
-        # the canard mounted at fuselage top, eta ~0.95-1.05.
-        # Calculate from geometry rather than hardcoding.
-        canard_cl_cruise = 0.5  # Typical cruise CL for canard
-        downwash_angle = 2 * canard_cl_cruise / (math.pi * ar_canard)
-        # Wing sees reduced angle of attack due to canard downwash
-        # eta accounts for this interaction
-        eta_canard = 1.0 - downwash_angle * 0.5  # ~0.95-1.0
+        # Canard downwash on wing with vertical separation (Phillips, Ch. 9)
+        #
+        # Far-field downwash derivative:
+        #   d(epsilon)/d(alpha) = (2 / (pi * AR_c)) * a_c
+        # With vertical offset h between canard and wing plane:
+        #   d(epsilon)/d(alpha) *= 1 / (1 + (2*h / b_c)^2)
+        # Canard efficiency factor: eta = 1 - d(epsilon)/d(alpha)
+        h = self.geo.canard_vertical_offset_in  # vertical separation
+        b_c = self.geo.canard_span  # canard span (inches)
+        vert_factor = 1.0 / (1.0 + (2.0 * h / b_c) ** 2)
+        d_eps_dalpha = (2.0 / (math.pi * ar_canard)) * a_canard * vert_factor
+        eta_canard = 1.0 - d_eps_dalpha
 
         # Calculate NP
         numerator = (a_wing * s_wing * ac_wing) + (
@@ -332,14 +401,74 @@ class PhysicsEngine:
             cg_range_aft=cg_range_aft,
         )
 
+    def calculate_envelope_margins(self) -> Dict[str, Dict[str, float]]:
+        """Check CG stays within stable envelope across pilot/fuel extremes.
+
+        Evaluates 4-corner scenarios: light/heavy pilot x min/max fuel.
+        Each must produce CG within forward (20% margin) and aft (5% margin)
+        limits relative to the neutral point.
+
+        Returns:
+            Dict mapping scenario name to {cg, margin_pct, is_safe}.
+        """
+        fc = config.flight_condition
+        sw = config.structural_weights
+        np_loc = self.calculate_neutral_point()
+        mac, _ = self.calculate_mac()
+        cg_fwd = np_loc - 0.20 * mac
+        cg_aft = np_loc - 0.05 * mac
+
+        # Build empty-weight snapshot (excludes pilot and fuel)
+        empty_items = [
+            i
+            for i in self._weight_balance.items
+            if i.category not in ("payload", "fuel")
+        ]
+        empty_weight = sum(i.weight for i in empty_items)
+        empty_moment = sum(i.moment for i in empty_items)
+
+        fuel_density = sw.fuel_density_lb_per_gal
+        fuel_arm = sw.fuel_arm_in
+        pilot_arm = config.geometry.fs_pilot_seat
+
+        scenarios = {
+            "light_pilot_min_fuel": (fc.pilot_weight_min_lb, fc.fuel_reserve_gal),
+            "heavy_pilot_max_fuel": (
+                fc.pilot_weight_max_lb,
+                config.propulsion.fuel_capacity_gal,
+            ),
+            "heavy_pilot_min_fuel": (fc.pilot_weight_max_lb, fc.fuel_reserve_gal),
+            "light_pilot_max_fuel": (
+                fc.pilot_weight_min_lb,
+                config.propulsion.fuel_capacity_gal,
+            ),
+        }
+
+        results = {}
+        for name, (pilot_lb, fuel_gal) in scenarios.items():
+            fuel_lb = fuel_gal * fuel_density
+            total_w = empty_weight + pilot_lb + fuel_lb
+            total_m = empty_moment + pilot_lb * pilot_arm + fuel_lb * fuel_arm
+            cg = total_m / total_w if total_w > 0 else 0.0
+            margin_pct = (np_loc - cg) / mac * 100.0 if mac > 0 else 0.0
+            results[name] = {
+                "cg": cg,
+                "margin_pct": margin_pct,
+                "is_safe": cg_fwd <= cg <= cg_aft,
+            }
+        return results
+
     def add_payload(self, name: str, weight: float, arm: float):
         """Add a payload item to weight & balance."""
         self._weight_balance.add_item(name, weight, arm, "payload")
 
-    def add_fuel(self, gallons: float, arm: float = 95.0):
-        """Add fuel to weight & balance (6 lbs/gal for avgas)."""
+    def add_fuel(self, gallons: float, arm: float = None):
+        """Add fuel to weight & balance using config fuel density."""
+        if arm is None:
+            arm = config.structural_weights.fuel_arm_in
+        density = config.structural_weights.fuel_density_lb_per_gal
         self._weight_balance.add_item(
-            f"Fuel ({gallons:.1f} gal)", gallons * 6.0, arm, "fuel"
+            f"Fuel ({gallons:.1f} gal)", gallons * density, arm, "fuel"
         )
 
     def get_weight_balance(self) -> WeightBalance:
@@ -347,11 +476,14 @@ class PhysicsEngine:
         return self._weight_balance
 
     @staticmethod
-    def calculate_reynolds(velocity_kts: float = 160.0, chord_in: float = 50.0,
-                           altitude_ft: float = 8000.0) -> float:
+    def calculate_reynolds(
+        velocity_kts: float = 160.0, chord_in: float = 50.0, altitude_ft: float = 8000.0
+    ) -> float:
         """Calculate Reynolds number at given flight conditions.
 
         Re = rho * V * c / mu
+
+        Uses ISA standard atmosphere model for density and viscosity.
 
         Args:
             velocity_kts: Airspeed in knots
@@ -361,9 +493,10 @@ class PhysicsEngine:
         Returns:
             Reynolds number (dimensionless)
         """
-        # Standard atmosphere at 8000 ft
-        rho = 0.001869  # slug/ft³
-        mu = 3.637e-7  # slug/(ft·s)
+        from .atmosphere import density, viscosity
+
+        rho = density(altitude_ft)
+        mu = viscosity(altitude_ft)
 
         # Convert units
         velocity_fps = velocity_kts * 1.6878  # knots to ft/s
@@ -387,27 +520,108 @@ class PhysicsEngine:
         """
         Verify that canard stalls before wing (safety critical).
 
-        The canard must reach its stall angle before the wing to ensure
-        the aircraft naturally pitches down at the stall, rather than
-        experiencing a wing stall with loss of roll control.
+        Compares effective stall angles accounting for:
+        - Sweep-corrected lift curve slopes (Anderson eq. 5.69)
+        - Reynolds-scaled CLmax (Raymer Sec. 12.5): CLmax * (Re/Re_ref)^0.1
+        - Incidence angle differences
+
+        The canard must stall at a lower aircraft alpha than the wing.
 
         Returns:
             Tuple of (is_safe, message)
         """
-        # Area ratio check (canard should be appropriately sized relative to wing)
-        area_ratio = self.geo.canard_area / self.geo.wing_area
+        from .atmosphere import density, viscosity
 
-        # For Long-EZ, typical safe ratio is 0.12-0.18
-        if 0.10 <= area_ratio <= 0.20:
-            return (
-                True,
-                f"Canard/Wing area ratio: {area_ratio:.3f} (safe range: 0.10-0.20)",
-            )
-        else:
-            return (
-                False,
-                f"WARNING: Canard/Wing area ratio {area_ratio:.3f} outside safe range!",
-            )
+        al = config.aero_limits
+        fc = config.flight_condition
+
+        # Lift curve slopes (reuse NP calculation logic)
+        ar_wing = self.geo.wing_aspect_ratio
+        ar_canard = (self.geo.canard_span / 12) ** 2 / self.geo.canard_area
+
+        taper_wing = self.geo.wing_tip_chord / self.geo.wing_root_chord
+        tan_le_wing = math.tan(math.radians(self.geo.wing_sweep_le))
+        tan_half_wing = tan_le_wing - (
+            2
+            * self.geo.wing_root_chord
+            * (1 - taper_wing)
+            / (self.geo.wing_span * (1 + taper_wing))
+        )
+
+        taper_canard = self.geo.canard_tip_chord / self.geo.canard_root_chord
+        tan_le_canard = math.tan(math.radians(self.geo.canard_sweep_le))
+        tan_half_canard = tan_le_canard - (
+            2
+            * self.geo.canard_root_chord
+            * (1 - taper_canard)
+            / (self.geo.canard_span * (1 + taper_canard))
+        )
+
+        a_wing = (
+            2
+            * math.pi
+            * ar_wing
+            / (2 + math.sqrt(4 + ar_wing**2 * (1 + tan_half_wing**2)))
+        )
+        a_canard = (
+            2
+            * math.pi
+            * ar_canard
+            / (2 + math.sqrt(4 + ar_canard**2 * (1 + tan_half_canard**2)))
+        )
+
+        # Reynolds-scaled CLmax (Raymer Sec. 12.5)
+        # At approach speed, compute Re for each surface using representative chord
+        alt = fc.design_altitude_ft
+        rho = density(alt)
+        mu = viscosity(alt)
+        v_fps = fc.approach_speed_ktas * 1.6878  # knots to ft/s
+
+        # Representative chords: use MAC
+        mac_canard = (
+            (2 / 3)
+            * self.geo.canard_root_chord
+            * (1 + taper_canard + taper_canard**2)
+            / (1 + taper_canard)
+        )
+        mac_wing, _ = self.calculate_mac()
+        chord_canard_ft = mac_canard / 12.0
+        chord_wing_ft = mac_wing / 12.0
+
+        re_canard = rho * v_fps * chord_canard_ft / mu
+        re_wing = rho * v_fps * chord_wing_ft / mu
+
+        # Scale CLmax: CLmax_actual = CLmax_ref * (Re/Re_ref)^0.1
+        re_ref = al.clmax_reference_re
+        clmax_canard = al.canard_clmax * (re_canard / re_ref) ** 0.1
+        clmax_wing = al.wing_clmax * (re_wing / re_ref) ** 0.1
+
+        # Effective stall AoA for each surface (degrees)
+        # alpha_stall = CLmax / a (rad) converted to deg, adjusted for zero-lift AoA and incidence
+        alpha_stall_canard = (
+            math.degrees(clmax_canard / a_canard)
+            + al.canard_alpha_0L
+            - self.geo.canard_incidence
+        )
+        alpha_stall_wing = (
+            math.degrees(clmax_wing / a_wing)
+            + al.wing_alpha_0L
+            - self.geo.wing_incidence
+        )
+
+        margin_deg = alpha_stall_wing - alpha_stall_canard
+        is_safe = margin_deg >= al.min_stall_margin_deg
+
+        msg = (
+            f"Canard stall margin: {margin_deg:.1f} deg "
+            f"(min required: {al.min_stall_margin_deg:.1f} deg). "
+            f"CLmax_canard={clmax_canard:.3f} (Re={re_canard:.0f}), "
+            f"CLmax_wing={clmax_wing:.3f} (Re={re_wing:.0f})"
+        )
+        if not is_safe:
+            msg = "WARNING: " + msg
+
+        return (is_safe, msg)
 
     def export_json(self, output_path: Path) -> Path:
         """Export stability analysis to JSON."""
@@ -909,8 +1123,13 @@ class OpenVSPRunner:
             vsp.SetParmVal(winglet_id, "Root_Chord", "XSec_1", geom.winglet_root_chord)
             vsp.SetParmVal(winglet_id, "Tip_Chord", "XSec_1", geom.winglet_tip_chord)
             vsp.SetParmVal(winglet_id, "Dihedral", "XSec_1", 90.0)
-            vsp.SetParmVal(winglet_id, "X_Rel_Location", "XForm",
-                           geom.wing_le_fs + geom.wing_span / 2 * math.tan(math.radians(geom.wing_sweep_le)))
+            vsp.SetParmVal(
+                winglet_id,
+                "X_Rel_Location",
+                "XForm",
+                geom.wing_le_fs
+                + geom.wing_span / 2 * math.tan(math.radians(geom.wing_sweep_le)),
+            )
             vsp.SetParmVal(winglet_id, "Y_Rel_Location", "XForm", geom.wing_span / 2)
 
             rudder_id = vsp.AddSubSurf(winglet_id, vsp.SS_CONTROL)
@@ -961,8 +1180,16 @@ class OpenVSPRunner:
                 },
             },
             "control_surfaces": {
-                "elevon": {"span_fraction": [0.30, 1.0], "chord_fraction": 0.25, "max_deflection_deg": 20.0},
-                "rudder": {"span_fraction": [0.0, 1.0], "chord_fraction": 0.30, "max_deflection_deg": 25.0},
+                "elevon": {
+                    "span_fraction": [0.30, 1.0],
+                    "chord_fraction": 0.25,
+                    "max_deflection_deg": 20.0,
+                },
+                "rudder": {
+                    "span_fraction": [0.0, 1.0],
+                    "chord_fraction": 0.30,
+                    "max_deflection_deg": 25.0,
+                },
             },
         }
         json_path = output_path.with_suffix(".vsp3.json")
@@ -995,7 +1222,7 @@ class OpenVSPRunner:
     ) -> None:
         payload = {
             "metadata": {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "config_version": config.version,
                 "baseline": config.baseline,
             },

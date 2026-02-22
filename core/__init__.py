@@ -40,6 +40,8 @@ __all__ = [
     "CLMaxResult",
     "StructuralMeshManifest",
     "openvsp_runner",
+    # Atmosphere
+    "atmosphere",
 ]
 
 _LAZY_IMPORTS = {
@@ -68,6 +70,7 @@ _LAZY_IMPORTS = {
     "CLMaxResult": "core.analysis",
     "StructuralMeshManifest": "core.analysis",
     "openvsp_runner": "core.analysis",
+    "atmosphere": "core.atmosphere",
 }
 
 

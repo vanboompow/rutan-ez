@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.modules.setdefault("cadquery", MagicMock())
 sys.modules.setdefault("OCP", MagicMock())
 
-import numpy as np
+import numpy as np  # noqa: E402
 
 
 def _make_symmetric_airfoil():
@@ -34,13 +34,14 @@ def _make_symmetric_airfoil():
     x = 0.5 * (1 - np.cos(beta))
     t = 0.12
     yt = (t / 0.2) * (
-        0.2969 * np.sqrt(x) - 0.1260 * x - 0.3516 * x**2
-        + 0.2843 * x**3 - 0.1015 * x**4
+        0.2969 * np.sqrt(x) - 0.1260 * x - 0.3516 * x**2 + 0.2843 * x**3 - 0.1015 * x**4
     )
     return AirfoilCoordinates(
         name="NACA0012_synthetic",
-        x_upper=x.copy(), y_upper=yt.copy(),
-        x_lower=x.copy(), y_lower=-yt.copy(),
+        x_upper=x.copy(),
+        y_upper=yt.copy(),
+        x_lower=x.copy(),
+        y_lower=-yt.copy(),
     )
 
 
@@ -98,7 +99,7 @@ def test_washout_magnitude_scales_with_angle():
     x2, y2 = airfoil.apply_washout(2.0).coordinates
     y_le_1 = y1[np.argmin(x1)]
     y_le_2 = y2[np.argmin(x2)]
-    ratio = abs(y_le_2 / y_le_1) if abs(y_le_1) > 1e-10 else float('inf')
+    ratio = abs(y_le_2 / y_le_1) if abs(y_le_1) > 1e-10 else float("inf")
     assert 1.8 < ratio < 2.2, f"Ratio {ratio:.3f}, expected ~2.0"
 
 

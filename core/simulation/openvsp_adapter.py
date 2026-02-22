@@ -124,13 +124,13 @@ class OpenVSPAdapter:
             # Viterna post-stall model: gradual rolloff after cl_max
             if cl_linear > cl_max:
                 excess = alpha - alpha_stall
-                cl = cl_max - 0.05 * excess ** 2
+                cl = cl_max - 0.05 * excess**2
             else:
                 cl = cl_linear
 
             cm = cm0 - 0.0008 * alpha
             # Proper induced drag: CD_i = CL^2 / (pi * e * AR)
-            cd = cd0 + cl ** 2 / (math.pi * e * ar)
+            cd = cd0 + cl**2 / (math.pi * e * ar)
             results.append(AeroPolar(alpha_deg=alpha, cl=cl, cm=cm, cd=cd))
         return results
 

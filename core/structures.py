@@ -14,7 +14,7 @@ All dimensions derive from config/aircraft_config.py.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 import numpy as np
 import cadquery as cq
 
@@ -417,7 +417,9 @@ class WingGenerator(FoamCore):
         kerf = config.manufacturing.kerf_compensation.get(foam_type, 0.04)
 
         step_path = self.export_step(output_path)
-        stl_path = self.export_stl(output_path, tolerance=intents.printable_jigs.tolerance)
+        stl_path = self.export_stl(
+            output_path, tolerance=intents.printable_jigs.tolerance
+        )
         dxf_path = self.export_dxf(output_path)
         gcode_path = self.export_gcode(
             output_path,
@@ -728,27 +730,21 @@ class StrakeGenerator(AircraftComponent):
         # Inboard profile (at fuselage junction)
         # This is a simple flat rectangle where strake meets fuselage side
         inboard_profile = (
-            cq.Workplane("YZ")
-            .center(bl_inboard, 0)
-            .rect(2.0, fuselage_height)
-            .wire()
+            cq.Workplane("YZ").center(bl_inboard, 0).rect(2.0, fuselage_height).wire()
         )
-        profiles.append(inboard_profile.val().moved(
-            cq.Location(cq.Vector(fs_le, 0, 0))
-        ))
+        profiles.append(
+            inboard_profile.val().moved(cq.Location(cq.Vector(fs_le, 0, 0)))
+        )
 
         # Mid profile (blend region)
         mid_bl = (bl_inboard + bl_outboard) / 2
         mid_height = (fuselage_height + wing_root_thickness) / 2
         mid_profile = (
-            cq.Workplane("YZ")
-            .center(mid_bl, 0)
-            .ellipse(mid_height / 2, 3.0)
-            .wire()
+            cq.Workplane("YZ").center(mid_bl, 0).ellipse(mid_height / 2, 3.0).wire()
         )
-        profiles.append(mid_profile.val().moved(
-            cq.Location(cq.Vector((fs_le + fs_te) / 2, 0, 0))
-        ))
+        profiles.append(
+            mid_profile.val().moved(cq.Location(cq.Vector((fs_le + fs_te) / 2, 0, 0)))
+        )
 
         # Outboard profile (wing root airfoil segment)
         # Simplified as ellipse matching wing root thickness
@@ -758,9 +754,9 @@ class StrakeGenerator(AircraftComponent):
             .ellipse(wing_root_thickness / 2, geo.wing_root_chord * 0.08)
             .wire()
         )
-        profiles.append(outboard_profile.val().moved(
-            cq.Location(cq.Vector(fs_te, 0, 0))
-        ))
+        profiles.append(
+            outboard_profile.val().moved(cq.Location(cq.Vector(fs_te, 0, 0)))
+        )
 
         # Loft through profiles
         try:
@@ -836,7 +832,7 @@ class StrakeGenerator(AircraftComponent):
             module_count = strake_cfg.battery_module_count
 
             # Cell dimensions (LiFePO4 prismatic)
-            cell_width = 2.5
+            _cell_width = 2.5  # used for future cradle sizing
             cell_height = 6.0
             cell_depth = 8.0
 
@@ -890,7 +886,9 @@ class StrakeGenerator(AircraftComponent):
         # Fuel filler / charge port access
         filler_panel = (
             cq.Workplane("XY")
-            .center(strake_cfg.fs_trailing_edge - 5.0, 8.0 if self.side == "left" else -8.0)
+            .center(
+                strake_cfg.fs_trailing_edge - 5.0, 8.0 if self.side == "left" else -8.0
+            )
             .circle(2.0)
             .extrude(0.125)
         )
@@ -945,6 +943,7 @@ class StrakeGenerator(AircraftComponent):
         except Exception as e:
             # DXF export may fail for complex 3D geometry
             import logging
+
             logging.warning(f"Could not export strake DXF: {e}")
 
         return dxf_path
@@ -957,9 +956,9 @@ class StrakeGenerator(AircraftComponent):
             # Approximate volume displaced by battery modules
             cell_volume_in3 = 2.5 * 6.0 * 8.0  # Approximate cell dimensions
             total_cells = (
-                config.strakes.battery_module_count *
-                config.strakes.battery_cells_series *
-                config.strakes.battery_cells_parallel
+                config.strakes.battery_module_count
+                * config.strakes.battery_cells_series
+                * config.strakes.battery_cells_parallel
             )
             return (total_cells * cell_volume_in3) / 231.0  # Convert to gallons
         return 0.0
@@ -970,7 +969,9 @@ class StrakeGenerator(AircraftComponent):
         intents = config.manufacturing.component_intents.get("fuselage")
 
         step_path = self.export_step(output_path)
-        stl_path = self.export_stl(output_path, tolerance=intents.printable_jigs.tolerance)
+        stl_path = self.export_stl(
+            output_path, tolerance=intents.printable_jigs.tolerance
+        )
         dxf_path = self.export_dxf(output_path)
 
         return {

@@ -205,10 +205,11 @@ class Airfoil:
         if len(self._x) != len(other._x):
             # Resample other to match self's point count
             from scipy.interpolate import interp1d
+
             t_self = np.linspace(0, 1, len(self._x))
             t_other = np.linspace(0, 1, len(other._x))
-            fx = interp1d(t_other, other._x, kind='linear')
-            fy = interp1d(t_other, other._y, kind='linear')
+            fx = interp1d(t_other, other._x, kind="linear")
+            fy = interp1d(t_other, other._y, kind="linear")
             other_x = fx(t_self)
             other_y = fy(t_self)
         else:
@@ -227,6 +228,101 @@ class Airfoil:
             y_lower=y_blend[half:][::-1],
         )
         return Airfoil(new_coords, self._n_points, smooth=False)
+
+    def offset_inward(self, thickness_in: float, chord_in: float) -> "Airfoil":
+        """Shrink airfoil profile inward by skin thickness for foam core deduction.
+
+        Offsets each point along its local inward normal by the specified
+        thickness. Includes trailing-edge collapse protection: if upper and
+        lower surfaces cross after offset, the TE is capped at the
+        intersection point.
+
+        Args:
+            thickness_in: Skin laminate thickness in inches
+            chord_in: Chord length in inches (for normalization)
+
+        Returns:
+            New Airfoil with offset coordinates (normalized to unit chord)
+        """
+        t_norm = thickness_in / chord_in
+        x = self._x.copy()
+        y = self._y.copy()
+
+        # Split at the trailing edge (max x).
+        # Coordinates go: LE(x=0) -> TE(x=1) [upper] -> LE(x=0) [lower]
+        te_idx = np.argmax(x)
+
+        # Upper surface: indices 0 .. te_idx (LE -> TE)
+        xu, yu = x[: te_idx + 1], y[: te_idx + 1]
+        # Lower surface: indices te_idx .. end (TE -> LE)
+        xl, yl = x[te_idx:], y[te_idx:]
+
+        def offset_surface(xs, ys, direction):
+            """Offset a surface inward by t_norm along local normals.
+
+            direction: +1 for upper (offset downward), -1 for lower (offset upward)
+            """
+            n = len(xs)
+            xo, yo = xs.copy(), ys.copy()
+            for i in range(n):
+                # Finite difference tangent
+                if i == 0:
+                    dx, dy = xs[1] - xs[0], ys[1] - ys[0]
+                elif i == n - 1:
+                    dx, dy = xs[-1] - xs[-2], ys[-1] - ys[-2]
+                else:
+                    dx, dy = xs[i + 1] - xs[i - 1], ys[i + 1] - ys[i - 1]
+                length = np.sqrt(dx**2 + dy**2)
+                if length < 1e-12:
+                    continue
+                # Inward normal: rotate tangent 90 deg toward airfoil interior
+                nx, ny = -dy / length * direction, dx / length * direction
+                xo[i] = xs[i] + nx * t_norm
+                yo[i] = ys[i] + ny * t_norm
+            return xo, yo
+
+        xu_off, yu_off = offset_surface(xu, yu, -1)  # Upper offsets down
+        xl_off, yl_off = offset_surface(xl, yl, +1)  # Lower offsets up
+
+        # TE collapse protection: walk from TE toward LE, check for crossing.
+        # Upper goes LE(0)->TE(end), lower goes TE(0)->LE(end).
+        # To compare at matching x-stations near TE:
+        # upper TE is at end, lower TE is at start.
+        # Walk backward from upper TE and forward from lower start.
+        nu, nl = len(xu_off), len(xl_off)
+        cut_u = nu  # Default: keep all upper points
+        cut_l = 0  # Default: keep all lower points
+
+        min_check = min(nu, nl)
+        for i in range(min_check):
+            u_idx = nu - 1 - i  # Walk backward from upper TE
+            l_idx = i  # Walk forward from lower TE
+            if yu_off[u_idx] <= yl_off[l_idx]:
+                # Collapse detected
+                avg_y = (yu_off[u_idx] + yl_off[l_idx]) / 2
+                yu_off[u_idx] = avg_y
+                yl_off[l_idx] = avg_y
+                cut_u = u_idx + 1
+                cut_l = l_idx
+                break
+
+        if cut_u < nu:
+            xu_off = xu_off[:cut_u]
+            yu_off = yu_off[:cut_u]
+            xl_off = xl_off[cut_l:]
+            yl_off = yl_off[cut_l:]
+
+        # Reconstruct: upper goes LE->TE, lower goes TE->LE
+        # AirfoilCoordinates expects x_upper LE->TE, x_lower LE->TE
+        # but the combined coords.x property reverses lower.
+        new_coords = AirfoilCoordinates(
+            name=f"{self.name}_offset_{thickness_in:.3f}in",
+            x_upper=xu_off,
+            y_upper=yu_off,
+            x_lower=xl_off[::-1],  # Reverse: TE->LE becomes LE->TE
+            y_lower=yl_off[::-1],
+        )
+        return Airfoil(new_coords, n_points=len(xu_off) + len(xl_off) - 1, smooth=False)
 
     def scale(self, chord: float) -> Tuple[np.ndarray, np.ndarray]:
         """

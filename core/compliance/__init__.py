@@ -22,11 +22,11 @@ from config import config
 class ManufacturingMethod(Enum):
     """Methods for fabricating aircraft components."""
 
-    BUILDER_MANUAL = "builder_manual"           # Hand layup, hand cutting
-    BUILDER_CNC = "builder_cnc"                 # Builder operates CNC
-    BUILDER_HELPER = "builder_helper"           # Helper assists under builder supervision
-    COMMERCIAL_KIT = "commercial_kit"           # Pre-fab kit parts
-    COMMERCIAL_SERVICE = "commercial_service"   # Outsourced fabrication
+    BUILDER_MANUAL = "builder_manual"  # Hand layup, hand cutting
+    BUILDER_CNC = "builder_cnc"  # Builder operates CNC
+    BUILDER_HELPER = "builder_helper"  # Helper assists under builder supervision
+    COMMERCIAL_KIT = "commercial_kit"  # Pre-fab kit parts
+    COMMERCIAL_SERVICE = "commercial_service"  # Outsourced fabrication
 
 
 class CreditCategory(Enum):

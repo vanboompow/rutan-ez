@@ -14,7 +14,7 @@ Grain Orientation Support:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -376,8 +376,9 @@ class NestingPlanner:
 
         # Main arrow line
         msp.add_line(
-            (x1, y1), (x2, y2),
-            dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3}  # Green
+            (x1, y1),
+            (x2, y2),
+            dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3},  # Green
         )
 
         # Arrowhead
@@ -390,12 +391,10 @@ class NestingPlanner:
         hy2 = y2 + head_size * math.sin(angle_rad - head_angle)
 
         msp.add_line(
-            (x2, y2), (hx1, hy1),
-            dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3}
+            (x2, y2), (hx1, hy1), dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3}
         )
         msp.add_line(
-            (x2, y2), (hx2, hy2),
-            dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3}
+            (x2, y2), (hx2, hy2), dxfattribs={"layer": "GRAIN_DIRECTION", "color": 3}
         )
 
     def _add_sheet_grain_indicator(
@@ -414,15 +413,14 @@ class NestingPlanner:
         y1 = y0 + length * math.sin(angle_rad)
 
         msp.add_line(
-            (x0, y0), (x1, y1),
-            dxfattribs={"layer": "SHEET_GRAIN", "color": 5}  # Blue
+            (x0, y0),
+            (x1, y1),
+            dxfattribs={"layer": "SHEET_GRAIN", "color": 5},  # Blue
         )
 
         # Label
         msp.add_text(
-            "SHEET GRAIN",
-            height=0.25,
-            dxfattribs={"layer": "SHEET_GRAIN", "color": 5}
+            "SHEET GRAIN", height=0.25, dxfattribs={"layer": "SHEET_GRAIN", "color": 5}
         ).set_pos((x0, y0 - 0.5), align="LEFT")
 
     def export_with_orientation(
@@ -494,9 +492,11 @@ class NestingPlanner:
                 # Copy entities with rotation support
                 if placement.rotation == 90.0:
                     self._copy_entities_rotated(
-                        src, msp,
-                        placement.origin[0], placement.origin[1],
-                        placement.rotation
+                        src,
+                        msp,
+                        placement.origin[0],
+                        placement.origin[1],
+                        placement.rotation,
                     )
                 else:
                     self._copy_entities(src, msp, *placement.origin)
@@ -555,8 +555,7 @@ class NestingPlanner:
         for entity in source_doc.modelspace():
             copied = entity.copy()
             # Rotate about origin, then translate
-            if hasattr(copied, 'transform'):
-                import ezdxf.math as emath
+            if hasattr(copied, "transform"):
                 # Create rotation matrix
                 angle_rad = math.radians(rotation)
                 copied.rotate(angle_rad)

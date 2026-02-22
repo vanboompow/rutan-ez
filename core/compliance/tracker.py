@@ -150,7 +150,7 @@ class ComplianceTaskTracker:
 
         header = f"""
 # FAA 8000-38 Running Checklist
-Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+Generated: {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}
 Project: {config.project_name} ({config.baseline})
 Baseline Canard Airfoil: {config.airfoils.canard.value}
 
@@ -219,7 +219,7 @@ Baseline Canard Airfoil: {config.airfoils.canard.value}
             steps = [
                 (
                     "Spar cap build",
-                    f"Lay {config.materials.spar_cap_plies} UNI plies in trough, maintaining {config.materials.spar_trough_depth:.3f}\" depth.",
+                    f'Lay {config.materials.spar_cap_plies} UNI plies in trough, maintaining {config.materials.spar_trough_depth:.3f}" depth.',
                 ),
                 (
                     "Upper skin",
@@ -266,5 +266,3 @@ Baseline Canard Airfoil: {config.airfoils.canard.value}
 
 # Module-level helper bound to the primary compliance tracker
 compliance_task_tracker = ComplianceTaskTracker(compliance_tracker)
-
-

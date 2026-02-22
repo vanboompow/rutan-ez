@@ -29,11 +29,12 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.modules.setdefault("cadquery", MagicMock())
 sys.modules.setdefault("OCP", MagicMock())
 
-import math
-import pytest
+import math  # noqa: E402
 
 
-def _anderson_lift_slope(ar: float, sweep_half_chord_deg: float, mach: float = 0.0) -> float:
+def _anderson_lift_slope(
+    ar: float, sweep_half_chord_deg: float, mach: float = 0.0
+) -> float:
     """Compute lift curve slope per Anderson's formula with sweep correction.
 
     Reference: Anderson, Fundamentals of Aerodynamics, Eq. (5.66)
@@ -50,13 +51,13 @@ def _anderson_lift_slope(ar: float, sweep_half_chord_deg: float, mach: float = 0
     sweep_rad = math.radians(sweep_half_chord_deg)
     tan_sq = math.tan(sweep_rad) ** 2
 
-    a = (2 * math.pi * ar) / (
-        2 + math.sqrt(4 + ar**2 * (1 + tan_sq / beta_sq))
-    )
+    a = (2 * math.pi * ar) / (2 + math.sqrt(4 + ar**2 * (1 + tan_sq / beta_sq)))
     return a
 
 
-def _le_sweep_to_half_chord_sweep(sweep_le_deg: float, ar: float, taper: float) -> float:
+def _le_sweep_to_half_chord_sweep(
+    sweep_le_deg: float, ar: float, taper: float
+) -> float:
     """Convert leading-edge sweep to half-chord sweep.
 
     tan(sweep_c/2) = tan(sweep_LE) - (2/AR) * (1 - taper) / (1 + taper) * 0.5
@@ -115,11 +116,12 @@ class TestLiftCurveSlopeWing:
         taper = geo.wing_tip_chord / geo.wing_root_chord
         tan_sweep_le = math.tan(math.radians(geo.wing_sweep_le))
         tan_sweep_half = tan_sweep_le - (
-            2 * geo.wing_root_chord * (1 - taper)
-            / (geo.wing_span * (1 + taper))
+            2 * geo.wing_root_chord * (1 - taper) / (geo.wing_span * (1 + taper))
         )
         a_engine_actual = (
-            2 * math.pi * ar_wing
+            2
+            * math.pi
+            * ar_wing
             / (2 + math.sqrt(4 + ar_wing**2 * (1 + tan_sweep_half**2)))
         )
 
@@ -133,8 +135,8 @@ class TestLiftCurveSlopeWing:
             f"Lift curve slope mismatch:\n"
             f"  Engine (sweep-corrected): {a_engine_actual:.4f}/rad\n"
             f"  Anderson (reference):     {a_correct:.4f}/rad\n"
-            f"  Error: {abs(a_engine_actual - a_correct)/a_correct*100:.1f}% "
-            f"(tolerance: {tolerance*100:.0f}%)"
+            f"  Error: {abs(a_engine_actual - a_correct) / a_correct * 100:.1f}% "
+            f"(tolerance: {tolerance * 100:.0f}%)"
         )
 
     def test_no_sweep_recovers_standard_formula(self):
@@ -169,11 +171,15 @@ class TestLiftCurveSlopeCanard:
         taper_canard = geo.canard_tip_chord / geo.canard_root_chord
         tan_sweep_le_c = math.tan(math.radians(geo.canard_sweep_le))
         tan_sweep_half_c = tan_sweep_le_c - (
-            2 * geo.canard_root_chord * (1 - taper_canard)
+            2
+            * geo.canard_root_chord
+            * (1 - taper_canard)
             / (geo.canard_span * (1 + taper_canard))
         )
         a_engine = (
-            2 * math.pi * ar_canard
+            2
+            * math.pi
+            * ar_canard
             / (2 + math.sqrt(4 + ar_canard**2 * (1 + tan_sweep_half_c**2)))
         )
 
@@ -188,7 +194,7 @@ class TestLiftCurveSlopeCanard:
             f"Canard lift slope mismatch:\n"
             f"  Engine (sweep-corrected): {a_engine:.4f}/rad\n"
             f"  Anderson (reference):     {a_correct:.4f}/rad\n"
-            f"  Error: {abs(a_engine - a_correct)/a_correct*100:.1f}%"
+            f"  Error: {abs(a_engine - a_correct) / a_correct * 100:.1f}%"
         )
 
     def test_canard_ar_reasonable(self):

@@ -119,6 +119,11 @@ class GeometricParams:
     fs_firewall: float = 180.0  # Engine firewall (F-28)
     fs_tail: float = 214.0  # Tail cone terminus
 
+    # === CANARD DOWNWASH ===
+    canard_vertical_offset_in: float = (
+        12.0  # Vertical separation canard AC to wing plane
+    )
+
     # === ERGONOMICS ===
     cockpit_width: float = 23.0  # F-22 interior width
     pilot_height_max: float = 77.0  # Max pilot height (inches)
@@ -126,9 +131,39 @@ class GeometricParams:
     # === DERIVED DIMENSIONS (computed at runtime) ===
     @property
     def canard_arm(self) -> float:
-        """Distance from wing AC to canard AC (critical for stability)."""
-        wing_ac = self.fs_wing_le + (self.wing_root_chord * 0.25)
-        canard_ac = self.fs_canard_le + (self.canard_root_chord * 0.25)
+        """Distance from wing AC to canard AC (critical for stability).
+
+        Uses MAC-based quarter chord with sweep offset for both surfaces.
+        """
+        import math
+
+        # Wing AC: MAC quarter-chord with sweep offset
+        taper_w = self.wing_tip_chord / self.wing_root_chord
+        mac_w = (
+            (2 / 3) * self.wing_root_chord * (1 + taper_w + taper_w**2) / (1 + taper_w)
+        )
+        y_mac_w = (self.wing_span / 2 / 3) * (1 + 2 * taper_w) / (1 + taper_w)
+        wing_ac = (
+            self.fs_wing_le
+            + y_mac_w * math.tan(math.radians(self.wing_sweep_le))
+            + 0.25 * mac_w
+        )
+
+        # Canard AC: MAC quarter-chord with sweep offset
+        taper_c = self.canard_tip_chord / self.canard_root_chord
+        mac_c = (
+            (2 / 3)
+            * self.canard_root_chord
+            * (1 + taper_c + taper_c**2)
+            / (1 + taper_c)
+        )
+        y_mac_c = (self.canard_span / 2 / 3) * (1 + 2 * taper_c) / (1 + taper_c)
+        canard_ac = (
+            self.fs_canard_le
+            + y_mac_c * math.tan(math.radians(self.canard_sweep_le))
+            + 0.25 * mac_c
+        )
+
         return wing_ac - canard_ac
 
     @property
@@ -346,6 +381,11 @@ class ManufacturingParams:
             FoamType.DIVINYCELL_H45: 0.030,
         }
 
+    # === SKIN DEDUCTION ===
+    skin_thickness_deduction: bool = True  # Offset foam core for skin thickness
+    wire_tension_lbf: float = 5.0  # Hot-wire tension for bow correction
+    wire_bow_correction: bool = True  # Enable geometric wire bow compensation
+
     # === FUSELAGE BUILD SETTINGS ===
     fuselage_build_method: BuildMethod = BuildMethod.BOW_FOAM
     max_cnc_block_length: float = 48.0  # Max CNC machine width (inches)
@@ -437,8 +477,75 @@ class AirfoilSelection:
 
 
 @dataclass
+class FlightConditionParams:
+    """Design flight conditions for aerodynamic analysis."""
+
+    design_altitude_ft: float = 8000.0  # Primary design altitude
+    v_ne_ktas: float = 200.0  # Never-exceed speed (KTAS)
+    approach_speed_ktas: float = 60.0  # Estimated approach speed for stall check
+
+    # === PILOT / PAYLOAD RANGES (for CG envelope) ===
+    pilot_weight_min_lb: float = 150.0
+    pilot_weight_max_lb: float = 250.0
+    fuel_reserve_gal: float = 5.0  # Minimum fuel reserve
+
+
+@dataclass
+class StructuralWeightParams:
+    """Measured structural component weights (from builder records)."""
+
+    wing_weight_lb: float = 85.0
+    wing_arm_in: float = 140.0
+    canard_weight_lb: float = 25.0
+    canard_arm_in: float = 45.0
+    fuselage_weight_lb: float = 120.0
+    fuselage_arm_in: float = 100.0
+    landing_gear_weight_lb: float = 45.0
+    landing_gear_arm_in: float = 130.0
+    electrical_weight_lb: float = 25.0
+    electrical_arm_in: float = 165.0
+    instruments_weight_lb: float = 15.0
+    instruments_arm_in: float = 75.0
+    interior_weight_lb: float = 20.0
+    interior_arm_in: float = 95.0
+    fuel_density_lb_per_gal: float = 6.01  # 100LL avgas
+    fuel_arm_in: float = 127.5  # Strake fuel CG location
+
+
+@dataclass
+class AeroLimitsParams:
+    """Aerodynamic limits for stall and stability analysis."""
+
+    # === CANARD STALL PRIORITY (safety critical) ===
+    canard_clmax: float = 1.35  # Roncz R1145MS (wind tunnel data)
+    wing_clmax: float = 1.45  # Eppler 1230 Modified
+    canard_alpha_0L: float = -3.0  # Zero-lift AoA (degrees)
+    wing_alpha_0L: float = -2.0  # Zero-lift AoA (degrees)
+    min_stall_margin_deg: float = 2.0  # Minimum canard-first stall margin
+    clmax_reference_re: float = 3.0e6  # Re at which CLmax values were measured
+
+
+@dataclass
+class FlutterParams:
+    """Parameters for torsional stiffness and flutter analysis."""
+
+    # === TORSION (D-box section) ===
+    shear_modulus_psi: float = 1.0e6  # G for glass/epoxy BID
+    skin_thickness_in: float = 0.048  # Effective skin thickness for D-box
+
+    # === FLUTTER (14 CFR 23.629) ===
+    flutter_safety_factor: float = 1.2  # V_flutter must exceed V_ne * this
+
+    # === CONTROL SURFACE MASS BALANCE ===
+    elevon_mass_balance_pct: float = 100.0  # 100% = CG on hinge line (minimum safe)
+    aileron_mass_balance_pct: float = 100.0
+
+
+@dataclass
 class ComplianceParams:
     """FAA 14 CFR 21.191(g) compliance tracking."""
+
+    strict_compliance: bool = False  # Block G-code export if < 51%
 
     # Task credit weights (percentage of 51% rule)
     task_credits: Dict[str, float] = field(
@@ -481,6 +588,14 @@ class AircraftConfig:
     compliance: ComplianceParams = field(default_factory=ComplianceParams)
     strakes: StrakeConfig = field(default_factory=StrakeConfig)
     propulsion: PropulsionConfig = field(default_factory=PropulsionConfig)
+    flight_condition: FlightConditionParams = field(
+        default_factory=FlightConditionParams
+    )
+    structural_weights: StructuralWeightParams = field(
+        default_factory=StructuralWeightParams
+    )
+    aero_limits: AeroLimitsParams = field(default_factory=AeroLimitsParams)
+    flutter: FlutterParams = field(default_factory=FlutterParams)
 
     # Project metadata
     project_name: str = "Open-EZ PDE"

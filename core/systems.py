@@ -18,13 +18,11 @@ geometry to handle different torque loads from the electric motor.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Dict, List, Optional, TYPE_CHECKING
 import math
 
 import cadquery as cq
-import numpy as np
 
 from config import config
 from config.aircraft_config import PropulsionType
@@ -289,7 +287,7 @@ class LycomingO235(Propulsion):
         - Propeller efficiency vs advance ratio
         """
         # Density ratio (simplified standard atmosphere)
-        rho_ratio = math.exp(-altitude_ft / 25000)
+        _rho_ratio = math.exp(-altitude_ft / 25000)  # reserved for density correction
 
         # Power available (HP)
         power_hp = self.get_power_available(altitude_ft) * throttle
@@ -382,7 +380,9 @@ class ElectricEZ(Propulsion):
     def get_weight_items(self) -> List[WeightItem]:
         """Return all electric propulsion weight items."""
         fs_firewall = config.geometry.fs_firewall
-        strake_cg = (config.strakes.fs_leading_edge + config.strakes.fs_trailing_edge) / 2
+        strake_cg = (
+            config.strakes.fs_leading_edge + config.strakes.fs_trailing_edge
+        ) / 2
 
         items = [
             WeightItem(
@@ -479,9 +479,9 @@ class ElectricEZ(Propulsion):
 
         # High-voltage cable penetrations (Phase A, B, C + DC cables)
         hv_positions = [
-            (6.0, 7.0),   # Phase A
-            (6.5, 6.0),   # Phase B
-            (7.0, 5.0),   # Phase C
+            (6.0, 7.0),  # Phase A
+            (6.5, 6.0),  # Phase B
+            (7.0, 5.0),  # Phase C
             (-6.0, 7.0),  # DC+
             (-6.5, 6.0),  # DC-
         ]
@@ -640,8 +640,6 @@ class ElectricEZ(Propulsion):
         """
         mounts: Dict[str, cq.Workplane] = {}
 
-        strake_cfg = config.strakes
-
         # Individual cell cradle (fits 2.5" x 6" x 8" prismatic cell)
         cell_width = 2.5
         cell_height = 6.0
@@ -743,7 +741,10 @@ def get_propulsion_system(
         engine.DRY_WEIGHT_LB = 268.0
         engine.name = "lycoming_o320"
         return engine
-    elif propulsion_type in (PropulsionType.ELECTRIC_LIFEPO4, PropulsionType.ELECTRIC_NMC):
+    elif propulsion_type in (
+        PropulsionType.ELECTRIC_LIFEPO4,
+        PropulsionType.ELECTRIC_NMC,
+    ):
         return ElectricEZ(battery_kwh=config.propulsion.battery_capacity_kwh)
     else:
         raise ValueError(f"Unknown propulsion type: {propulsion_type}")
