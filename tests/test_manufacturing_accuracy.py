@@ -76,9 +76,9 @@ class TestSkinDeduction:
         thick_orig = np.max(upper_orig) - np.min(lower_orig)
         thick_off = np.max(upper_off) - np.min(lower_off)
 
-        assert thick_off < thick_orig, (
-            f"Offset thickness {thick_off:.4f} not less than original {thick_orig:.4f}"
-        )
+        assert (
+            thick_off < thick_orig
+        ), f"Offset thickness {thick_off:.4f} not less than original {thick_orig:.4f}"
 
     def test_offset_amount_reasonable(self):
         """Thickness reduction should be approximately 2 * skin thickness / chord."""
@@ -106,9 +106,9 @@ class TestSkinDeduction:
         # Exact match isn't expected because: (1) normals aren't purely vertical,
         # (2) max thickness point shifts after offset, (3) spline resampling.
         assert reduction > 0, "No thickness reduction detected"
-        assert reduction < expected * 3, (
-            f"Reduction {reduction:.5f} too large vs expected {expected:.5f}"
-        )
+        assert (
+            reduction < expected * 3
+        ), f"Reduction {reduction:.5f} too large vs expected {expected:.5f}"
 
     def test_offset_preserves_valid_profile(self):
         """Offset airfoil should have reasonable coordinates (all within [0,1] x range)."""

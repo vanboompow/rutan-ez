@@ -15,10 +15,14 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-from config import config
-from core.aerodynamics import airfoil_factory
-from core.base import FoamCore
-from core.structures import CanardGenerator, WingGenerator
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import config  # noqa: E402
+from core.aerodynamics import airfoil_factory  # noqa: E402
+from core.base import FoamCore  # noqa: E402
+from core.structures import CanardGenerator, WingGenerator  # noqa: E402
 
 
 def _validate_configuration() -> None:

@@ -205,6 +205,6 @@ class TestLiftCurveSlopeCanard:
         ar_canard = (geo.canard_span / 12) ** 2 / geo.canard_area
 
         # Long-EZ canard AR should be roughly 9-12
-        assert 5.0 < ar_canard < 15.0, (
-            f"Canard AR = {ar_canard:.2f} is outside reasonable range [5, 15]"
-        )
+        assert (
+            5.0 < ar_canard < 15.0
+        ), f"Canard AR = {ar_canard:.2f} is outside reasonable range [5, 15]"
