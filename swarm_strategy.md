@@ -1,5 +1,17 @@
 # Autonomous Engineering Swarm Strategy
 
+> **Status: ARCHIVED -- Historical Reference Only**
+>
+> This document describes the original multi-agent persona approach used during initial
+> development (December 2025 -- January 2026). This strategy was an early experiment in
+> using role-based personas ([ARCH], [AERO], [MFG], [GOV], [OPS]) to guide LLM-assisted
+> development. The approach has been superseded by the GSD (Get Shit Done) framework
+> and Claude Code's native agent/subagent architecture.
+>
+> Retained for historical context. See `~/.claude/agents/` for current agent definitions.
+
+---
+
 This document outlines the multi-agent persona architecture and operational plan for the Open-EZ PDE project. It is designed to manage model capacity (context usage) and orchestrate "Swarm Sprints" for prototype production.
 
 ## 1. Swarm Persona Roles

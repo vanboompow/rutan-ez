@@ -1,5 +1,18 @@
 # Open-EZ PDE: Swarm Personas
 
+> **Status: ARCHIVED -- Historical Reference Only**
+>
+> This document describes the original role-based personas used during initial development
+> (December 2025 -- January 2026). These personas ([ARCH], [AERO], [MFG], [GOV], [OPS])
+> were an early experiment in prompt-engineering for LLM-guided aerospace development.
+> They have been superseded by the GSD framework and specialized Claude Code agents
+> (see `~/.claude/agents/{core,utility}/`).
+>
+> The domain knowledge embedded in these persona definitions remains relevant and is now
+> captured in `CLAUDE.md`, `.planning/codebase/ARCHITECTURE.md`, and the project memory.
+
+---
+
 This document defines the agentic personas used to develop the Open-EZ Plans-as-Code environment.
 
 ## 1. Role: Lead Systems Architect (Tag: [ARCH])

@@ -23,10 +23,14 @@ output/VSP/
 *.vsp
 vspaero.out
 
+# Generated output (keep output/validation/ for reference data)
+output/
+
 # Logs and Debugging
 logs/
 *.log
 .pytest_cache/
+.mypy_cache/
 
 # Git Worktrees
 .worktrees/

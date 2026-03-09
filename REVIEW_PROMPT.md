@@ -1,5 +1,13 @@
 # Comprehensive Review: Safety-Critical Physics & Manufacturing Improvements
 
+> **Status: ARCHIVED -- Review Completed (February 2026)**
+>
+> This review prompt was created for the `feature/physics-mfg-improvements` branch
+> (commit `fbe15f6`), which has since been merged to main. The 4-agent review team
+> (physics, test, integration, git-safety) completed their review with all checks passing.
+> Retained as a reference for the review methodology and as documentation of known
+> limitations identified during that review cycle.
+
 ## Instructions for Reviewer
 
 You are reviewing a 1,554-line changeset to **Open-EZ PDE**, aircraft design software for the Rutan Long-EZ (Model 61). This is safety-of-flight code -- errors can produce airframes that kill builders. Your review must be forensic.
