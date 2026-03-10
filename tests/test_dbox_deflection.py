@@ -269,3 +269,101 @@ class TestNominalSparCheckDBox:
         assert result["dbox_foam_compression_margin"] > 0, (
             f"Foam compression margin = {result['dbox_foam_compression_margin']:.4f}, must be > 0"
         )
+
+
+class TestDBoxFlutterIntegration:
+    """FlutterEstimator must use D-box EI for bending frequency."""
+
+    def test_bending_frequency_increases_with_dbox(self):
+        """D-box EI >> cap-only EI means higher natural bending frequency.
+
+        Cap-only EI ~ 2,500 lb-in^2, D-box EI ~ 101M lb-in^2.
+        omega_h ~ sqrt(EI) so bending frequency should increase dramatically.
+        The old cap-only bending frequency is ~0.13 Hz. D-box should be >> that.
+        """
+        from core.simulation.fea_adapter import FlutterEstimator
+
+        est = FlutterEstimator()
+        freq = est.bending_frequency_hz()
+        # With D-box EI ~101M vs cap-only ~2500, freq should increase by sqrt(40000) ~ 200x
+        # Old cap-only freq was ~0.13 Hz, so D-box should be >> 1 Hz
+        assert freq > 1.0, (
+            f"Bending frequency {freq:.2f} Hz too low — D-box EI should produce >> 1 Hz. "
+            f"If this is ~0.13 Hz, FlutterEstimator is still using cap-only EI."
+        )
+
+    def test_flutter_check_safe_with_dbox(self):
+        """Flutter check must pass with D-box model (improved stiffness)."""
+        from core.simulation.fea_adapter import FlutterEstimator
+
+        est = FlutterEstimator()
+        result = est.check_flutter()
+        assert result["is_safe"], (
+            f"Flutter not safe: speed={result['flutter_speed_ktas']:.0f} KTAS, "
+            f"required={result['required_speed_ktas']:.0f} KTAS"
+        )
+
+    def test_frequency_ratio_above_one(self):
+        """Torsion/bending frequency ratio should be > 1.0 for composite wings.
+
+        With D-box EI increasing bending frequency significantly,
+        the ratio torsion/bending should be > 1.0 (typical for well-designed wings).
+        """
+        from core.simulation.fea_adapter import FlutterEstimator
+
+        est = FlutterEstimator()
+        result = est.check_flutter()
+        ratio = result["frequency_ratio"]
+        assert ratio > 1.0, (
+            f"Frequency ratio {ratio:.2f} should be > 1.0 with D-box model. "
+            f"Bending={result['bending_freq_hz']:.2f} Hz, "
+            f"Torsion={result['torsion_freq_hz']:.2f} Hz"
+        )
+
+
+class TestDBoxWeight:
+    """D-box weight estimate must be in reasonable range."""
+
+    def test_dbox_weight_method_exists(self):
+        """DBoxBeamAdapter must have estimate_dbox_weight_lb method."""
+        from core.simulation.fea_adapter import DBoxBeamAdapter
+
+        adapter = DBoxBeamAdapter()
+        assert hasattr(adapter, "estimate_dbox_weight_lb"), (
+            "DBoxBeamAdapter missing estimate_dbox_weight_lb method"
+        )
+
+    def test_dbox_weight_range(self):
+        """D-box weight (skins + web, one wing half) should be 10-30 lb.
+
+        This is the structural glass weight for the D-box skins and web only,
+        excluding spar caps. For a Long-EZ wing with ~13 ft half-span,
+        2-ply BID skins over 25% chord, this should be 10-30 lb.
+        """
+        from core.simulation.fea_adapter import DBoxBeamAdapter
+
+        adapter = DBoxBeamAdapter()
+        half_span = config.geometry.wing_span / 2
+        weight = adapter.estimate_dbox_weight_lb(half_span)
+        assert 10.0 <= weight <= 30.0, (
+            f"D-box weight = {weight:.2f} lb, expected 10-30 lb per wing half"
+        )
+
+
+class TestDBoxExports:
+    """core.simulation must export D-box classes."""
+
+    def test_dbox_section_importable(self):
+        """DBoxSection must be importable from core.simulation."""
+        from core.simulation import DBoxSection
+        assert DBoxSection is not None
+
+    def test_dbox_result_importable(self):
+        """DBoxResult must be importable from core.simulation."""
+        from core.simulation import DBoxResult
+        assert DBoxResult is not None
+
+    def test_dbox_beam_adapter_importable(self):
+        """DBoxBeamAdapter must be importable from core.simulation."""
+        from core.simulation import DBoxBeamAdapter
+        assert DBoxBeamAdapter is not None
