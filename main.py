@@ -18,9 +18,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from config import config  # noqa: E402
-from core.structures import CanardGenerator, WingGenerator  # noqa: E402
 from core.analysis import physics, VSPBridge, OpenVSPRunner  # noqa: E402
-from core.manufacturing import JigFactory  # noqa: E402
 
 
 def validate_config() -> bool:
@@ -102,6 +100,9 @@ def run_analysis():
 
 def generate_manufacturing():
     """Generate physical production artifacts."""
+    from core.structures import CanardGenerator
+    from core.manufacturing import JigFactory
+
     print("\n--- Generating Manufacturing Artifacts ---")
 
     # 1. CNC G-Code (Foam Cores)
@@ -124,6 +125,7 @@ def generate_manufacturing():
 
 def generate_canard() -> None:
     """Generate canard foam core."""
+    from core.structures import CanardGenerator
     from core.compliance import compliance_task_tracker
 
     print("\n--- Generating Canard ---")
@@ -160,6 +162,7 @@ def generate_canard() -> None:
 
 def generate_wing() -> None:
     """Generate main wing foam cores."""
+    from core.structures import WingGenerator
     from core.aerodynamics import airfoil_factory
     from core.compliance import compliance_task_tracker
 

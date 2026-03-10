@@ -130,7 +130,7 @@ class TestGenerateCanardPipeline:
         mock_tracker.write_layup_schedule.return_value = Path("/tmp/layup.md")
 
         with (
-            patch("main.CanardGenerator", return_value=mock_canard),
+            patch("core.structures.CanardGenerator", return_value=mock_canard),
             patch("main.compliance_task_tracker", mock_tracker, create=True),
             patch("core.compliance.compliance_task_tracker", mock_tracker, create=True),
         ):
@@ -158,7 +158,7 @@ class TestGenerateCanardPipeline:
         mock_tracker = MagicMock()
         mock_tracker.write_layup_schedule.return_value = tmp_path / "layup.md"
 
-        with patch("main.CanardGenerator", return_value=mock_canard):
+        with patch("core.structures.CanardGenerator", return_value=mock_canard):
             with patch.dict(
                 "sys.modules",
                 {
