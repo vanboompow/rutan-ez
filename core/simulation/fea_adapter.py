@@ -106,20 +106,29 @@ class BeamFEAAdapter:
     def nominal_spar_check(self) -> Dict[str, float]:
         """Evaluate the main spar at half-span under a representative load.
 
-        Uses distributed load model (more realistic than point load) for
-        the primary spar check. Point load result retained for jig checks.
+        Returns both cap-only legacy results (for backward compatibility with
+        RegressionRunner) and D-box primary results with composite failure checks.
         """
         half_span = config.geometry.wing_span / 2
         load = 450.0  # lbf total for gust + maneuver reserve
 
-        # Distributed load is more realistic for aerodynamic loading
+        # --- Existing cap-only results (KEEP for backward compat) ---
         result_distributed = self.analyze_distributed(
             span_in=half_span, total_load_lbf=load
         )
         # Keep point load for reference / jig checks
         result_point = self.analyze_cantilever(span_in=half_span, tip_load_lbf=load)
         shear = self.calculate_shear_stress(span_in=half_span, load_lbf=load)
+
+        # --- D-box results (NEW primary) ---
+        dbox = DBoxBeamAdapter()
+        dbox_result = dbox.analyze_elliptic_dbox(span_in=half_span, total_load_lbf=load)
+
+        # Failure checks
+        dbox_failures = dbox_failure_checks(half_span, load)
+
         return {
+            # Cap-only legacy (backward compat for RegressionRunner)
             "tip_deflection_in": result_distributed.tip_deflection_in,
             "max_stress_psi": result_distributed.max_stress_psi,
             "tip_deflection_point_load_in": result_point.tip_deflection_in,
@@ -127,6 +136,11 @@ class BeamFEAAdapter:
             "max_shear_psi": shear["max_shear_psi"],
             "allowable_shear_psi": shear["allowable_shear_psi"],
             "shear_margin_of_safety": shear["margin_of_safety"],
+            # D-box primary
+            "dbox_tip_deflection_in": dbox_result.tip_deflection_in,
+            "dbox_max_stress_psi": dbox_result.max_stress_psi,
+            "dbox_n_stations": dbox_result.n_stations,
+            **dbox_failures,
         }
 
     def calculate_shear_stress(
@@ -816,6 +830,103 @@ class DBoxBeamAdapter:
             station_ei=EIs.tolist(),
             n_stations=n,
         )
+
+
+def dbox_failure_checks(half_span_in: float, total_load_lbf: float) -> Dict[str, float]:
+    """Compute composite failure margins for the D-box structure.
+
+    Four checks at the root station (worst case for bending):
+    1. Spar cap Tsai-Wu (UNI glass, bending stress)
+    2. D-box skin Tsai-Wu (BID glass, bending stress)
+    3. Shear web BID face sheets (shear stress vs F6)
+    4. Foam core compression (bearing stress vs foam allowable)
+
+    Returns dict with margin keys (>0 means safe).
+    """
+    mat = config.materials
+    dbox = DBoxBeamAdapter()
+    stations = dbox._build_stations(half_span_in)
+    root_section = stations[0][1]
+
+    # Root bending moment from elliptic load: M_root ~ 4P*L/(3*pi)
+    # (integral of elliptic load * lever arm from root to tip)
+    P = total_load_lbf
+    L = half_span_in
+    M_root = (4.0 * P * L) / (3.0 * math.pi)
+
+    d = root_section.dbox_depth_in  # section depth
+
+    # --- 1. Spar cap Tsai-Wu (UNI glass) ---
+    cap_t = root_section.spar_cap_plies * mat.uni_ply_thickness
+    cap_w = mat.spar_cap_width
+    # Spar cap stress: sigma = M * c / I_total, but for cap specifically
+    # use the bending stress in the cap fiber: sigma_cap = E_uni * kappa * d_cap
+    EI_total = root_section.ei_bending
+    kappa = M_root / EI_total
+    d_cap = (d - cap_t) / 2  # distance from NA to cap centroid
+    sigma_cap = UNI_GLASS_PROPERTIES["E1"] * kappa * (d_cap + cap_t / 2)
+
+    # Tsai-Wu for UNI glass under uniaxial bending
+    F1t = UNI_GLASS_PROPERTIES["F1t"]
+    F1c = UNI_GLASS_PROPERTIES["F1c"]
+    F2t = UNI_GLASS_PROPERTIES["F2t"]
+    F2c = UNI_GLASS_PROPERTIES["F2c"]
+    F6 = UNI_GLASS_PROPERTIES["F6"]
+
+    f1 = 1.0 / F1t - 1.0 / F1c
+    f11 = 1.0 / (F1t * F1c)
+    f2 = 1.0 / F2t - 1.0 / F2c
+    f22 = 1.0 / (F2t * F2c)
+    f12 = -0.5 * math.sqrt(f11 * f22)
+
+    F_cap = f1 * sigma_cap + f11 * sigma_cap**2
+    cap_margin = 1.0 - F_cap
+
+    # --- 2. D-box skin Tsai-Wu (BID glass) ---
+    skin_t = root_section.dbox_skin_plies * mat.bid_ply_thickness
+    sigma_skin = BID_GLASS_PROPERTIES["E1"] * kappa * (d / 2)
+
+    F1t_bid = BID_GLASS_PROPERTIES["F1t"]
+    F1c_bid = BID_GLASS_PROPERTIES["F1c"]
+    f1_bid = 1.0 / F1t_bid - 1.0 / F1c_bid
+    f11_bid = 1.0 / (F1t_bid * F1c_bid)
+    F_skin = f1_bid * sigma_skin + f11_bid * sigma_skin**2
+    skin_margin = 1.0 - F_skin
+
+    # --- 3. Web shear check (BID face sheets) ---
+    # Shear at root: V = total_load (worst case)
+    V = total_load_lbf
+    web_bid_t = root_section.dbox_web_bid_plies * mat.bid_ply_thickness * 2  # both faces
+    tau_web = V / (web_bid_t * d) if (web_bid_t * d) > 0 else float("inf")
+    F6_bid = BID_GLASS_PROPERTIES["F6"]
+    web_margin = (F6_bid / tau_web) - 1.0 if tau_web > 0 else float("inf")
+
+    # --- 4. Foam compression check ---
+    # Through-thickness compression on foam core in shear web.
+    # The web foam sees compression from bending curvature effects:
+    # sigma_foam = E_foam * kappa * (d/2)
+    # E_foam for styrofoam_blue ~ 1,200 psi (very low vs glass)
+    # This is typically very small for foam cores in sandwich beams.
+    foam_E = {"styrofoam_blue": 1200.0, "urethane_2lb": 3500.0, "divinycell_h45": 6500.0}
+    foam_key_e = config.materials.wing_core_foam.value
+    E_foam = foam_E.get(foam_key_e, 1200.0)
+    sigma_foam = E_foam * kappa * (d / 2)
+
+    foam_allowables = {
+        "styrofoam_blue": 25.0,
+        "urethane_2lb": 45.0,
+        "divinycell_h45": 85.0,
+    }
+    foam_key = config.materials.wing_core_foam.value
+    foam_allow = foam_allowables.get(foam_key, 25.0)
+    foam_margin = (foam_allow / sigma_foam) - 1.0 if sigma_foam > 0 else float("inf")
+
+    return {
+        "dbox_spar_cap_tsai_wu_margin": cap_margin,
+        "dbox_skin_tsai_wu_margin": skin_margin,
+        "dbox_web_shear_margin": web_margin,
+        "dbox_foam_compression_margin": foam_margin,
+    }
 
 
 # ---------------------------------------------------------------------------
