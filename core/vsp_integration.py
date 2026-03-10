@@ -6,14 +6,19 @@ Formal interface to NASA's Vehicle Sketch Pad (OpenVSP).
 Provides parametric geometry mapping and analysis execution.
 """
 
-import logging
-from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
 import json
+import logging
+import math
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from config import config
 
 logger = logging.getLogger(__name__)
+
+# Output path for native polar results
+_NATIVE_POLARS_PATH = Path("data/validation/vspaero_native_polars.json")
 
 
 class VSPIntegration:
@@ -47,7 +52,7 @@ class VSPIntegration:
             )
             return None
         except Exception as e:
-            logger.error(f"Error initializing OpenVSP: {e}")
+            logger.error("Error initializing OpenVSP: %s", e)
             return None
 
     @property
@@ -96,65 +101,207 @@ class VSPIntegration:
         return output_path
 
     def run_aerodynamic_sweep(
-        self, alpha_range: Tuple[float, float, int] = (-4, 12, 5)
+        self, alpha_range: Tuple[float, float, int] = (-4, 14, 19)
     ) -> Dict[str, Any]:
         """
         Execute an AoA sweep using VSPAERO or surrogate.
 
+        Args:
+            alpha_range: (alpha_start, alpha_end, n_points) tuple.
+                         Default is -4 to 14 deg in 1-deg steps (19 points).
+
         Returns:
-            Dictionary containing lift, drag, and moment coefficients.
+            Dictionary with mode, points (list of alpha_deg/cl/cd/cm dicts),
+            and solver metadata.
         """
         if self.has_vsp:
-            return self._run_native_sweep(alpha_range)
+            try:
+                return self._run_native_sweep(alpha_range)
+            except Exception as exc:
+                logger.warning(
+                    "Native VSPAERO sweep failed (%s), falling back to surrogate.", exc
+                )
+                return self._run_surrogate_sweep(alpha_range)
         else:
             return self._run_surrogate_sweep(alpha_range)
 
     def _run_native_sweep(
-        self, alpha_range: Tuple[float, float, int]
+        self,
+        alpha_range: Tuple[float, float, int],
+        polar_output: Optional[Path] = None,
     ) -> Dict[str, Any]:
-        """Drive the real OpenVSP/VSPAERO solver."""
-        # This would involve:
-        # 1. Clearing VSP world
-        # 2. Building geometry via VSP API
-        # 3. Setting up VSPAERO analysis
-        # 4. Extracting results
+        """
+        Drive the real OpenVSP/VSPAERO VLM solver.
+
+        Builds Long-EZ geometry, runs VSPAERO sweep, extracts CL/CD/CM polars,
+        writes results to data/validation/vspaero_native_polars.json.
+        """
+        vsp = self._vsp
+        geom = config.geometry
+
         logger.info("Executing native VSPAERO sweep...")
-        # Placeholder for real VSP API calls
-        return {"mode": "native", "results": "FIXME: Implement native VSP calls"}
+
+        # 1. Clear and rebuild geometry
+        vsp.ClearVSPModel()
+
+        # Main wing
+        wing_id = vsp.AddGeom("WING", "")
+        vsp.SetGeomName(wing_id, "MainWing")
+        vsp.SetParmVal(wing_id, "Span", "XSec_1", geom.wing_span / 2)
+        vsp.SetParmVal(wing_id, "Root_Chord", "XSec_1", geom.wing_root_chord)
+        vsp.SetParmVal(wing_id, "Tip_Chord", "XSec_1", geom.wing_tip_chord)
+        vsp.SetParmVal(wing_id, "Sweep", "XSec_1", geom.wing_sweep_le)
+        vsp.SetParmVal(wing_id, "Dihedral", "XSec_1", geom.wing_dihedral)
+        vsp.SetParmVal(wing_id, "Twist", "XSec_1", -geom.wing_washout)
+        vsp.SetParmVal(wing_id, "X_Rel_Location", "XForm", geom.wing_le_fs)
+        vsp.SetParmVal(wing_id, "Z_Rel_Location", "XForm", geom.wing_le_wl)
+
+        # Canard
+        canard_id = vsp.AddGeom("WING", "")
+        vsp.SetGeomName(canard_id, "Canard")
+        vsp.SetParmVal(canard_id, "Span", "XSec_1", geom.canard_span / 2)
+        vsp.SetParmVal(canard_id, "Root_Chord", "XSec_1", geom.canard_root_chord)
+        vsp.SetParmVal(canard_id, "Tip_Chord", "XSec_1", geom.canard_tip_chord)
+        vsp.SetParmVal(canard_id, "Sweep", "XSec_1", geom.canard_sweep_le)
+        vsp.SetParmVal(canard_id, "X_Rel_Location", "XForm", geom.canard_le_fs)
+        vsp.SetParmVal(canard_id, "Z_Rel_Location", "XForm", geom.canard_le_wl)
+
+        # Winglets
+        winglet_id = vsp.AddGeom("WING", "")
+        vsp.SetGeomName(winglet_id, "Winglet")
+        vsp.SetParmVal(winglet_id, "Span", "XSec_1", geom.winglet_height)
+        vsp.SetParmVal(winglet_id, "Root_Chord", "XSec_1", geom.winglet_root_chord)
+        vsp.SetParmVal(winglet_id, "Tip_Chord", "XSec_1", geom.winglet_tip_chord)
+        vsp.SetParmVal(winglet_id, "Dihedral", "XSec_1", 90.0)
+        vsp.SetParmVal(
+            winglet_id,
+            "X_Rel_Location",
+            "XForm",
+            geom.wing_le_fs + geom.wing_span / 2 * math.tan(math.radians(geom.wing_sweep_le)),
+        )
+        vsp.SetParmVal(winglet_id, "Y_Rel_Location", "XForm", geom.wing_span / 2)
+
+        # Fuselage
+        fuse_id = vsp.AddGeom("FUSELAGE", "")
+        vsp.SetGeomName(fuse_id, "Fuselage")
+        vsp.SetParmVal(fuse_id, "Length", "Design", geom.fuselage_length)
+
+        # 2. Set up VSPAERO analysis
+        alpha_start = float(alpha_range[0])
+        alpha_end = float(alpha_range[1])
+        n_pts = int(alpha_range[2])
+
+        vsp.SetAnalysisInputDefaults("VSPAEROSweep")
+        # VLM method (0 = VLM, 1 = Panel)
+        vsp.SetIntAnalysisInput("VSPAEROSweep", "AnalysisMethod", [0])
+        # Alpha sweep
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "AlphaStart", [alpha_start])
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "AlphaEnd", [alpha_end])
+        vsp.SetIntAnalysisInput("VSPAEROSweep", "AlphaNpts", [n_pts])
+        # Incompressible (Mach 0)
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "MachStart", [0.0])
+        # Y-symmetry (half model)
+        vsp.SetIntAnalysisInput("VSPAEROSweep", "Symmetry", [1])
+        # Reference geometry from config
+        # Wing mean aerodynamic chord (average of root and tip for trapezoidal wing)
+        wing_mac = (geom.wing_root_chord + geom.wing_tip_chord) / 2.0
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "Sref", [geom.wing_area])
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "bref", [geom.wing_span])
+        vsp.SetDoubleAnalysisInput("VSPAEROSweep", "cref", [wing_mac])
+
+        # 3. Execute
+        logger.info("Running VSPAERO VLM sweep (%d alpha points)...", n_pts)
+        results_id = vsp.ExecAnalysis("VSPAEROSweep")
+
+        # 4. Extract results
+        cl_arr: List[float] = list(vsp.GetDoubleResults(results_id, "CL"))
+        cd_arr: List[float] = list(vsp.GetDoubleResults(results_id, "CD"))
+        cm_arr: List[float] = list(vsp.GetDoubleResults(results_id, "CMy"))
+
+        # Build alpha array
+        if n_pts > 1:
+            step = (alpha_end - alpha_start) / (n_pts - 1)
+            alphas = [alpha_start + i * step for i in range(n_pts)]
+        else:
+            alphas = [alpha_start]
+
+        # Pad or trim arrays to n_pts if needed
+        def _pad(arr: List[float], length: int) -> List[float]:
+            if len(arr) >= length:
+                return arr[:length]
+            return arr + [0.0] * (length - len(arr))
+
+        cl_arr = _pad(cl_arr, n_pts)
+        cd_arr = _pad(cd_arr, n_pts)
+        cm_arr = _pad(cm_arr, n_pts)
+
+        points = [
+            {"alpha_deg": alphas[i], "cl": cl_arr[i], "cd": cd_arr[i], "cm": cm_arr[i]}
+            for i in range(n_pts)
+        ]
+
+        vsp_version = str(vsp.GetVSPVersion())
+        solver_settings = {
+            "method": "VLM",
+            "mach": 0.0,
+            "symmetry": True,
+            "alpha_range": [alpha_start, alpha_end],
+            "n_points": n_pts,
+        }
+
+        # 5. Write polar JSON
+        output_data = {
+            "source": "vspaero_native",
+            "vsp_version": vsp_version,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "solver_settings": solver_settings,
+            "points": points,
+        }
+
+        out_path = Path(polar_output) if polar_output is not None else _NATIVE_POLARS_PATH
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump(output_data, f, indent=2)
+        logger.info("Native VSPAERO polars written to %s", out_path)
+
+        return {
+            "mode": "native",
+            "source": "vspaero_native",
+            "points": points,
+            "solver_settings": solver_settings,
+            "vsp_version": vsp_version,
+        }
 
     def _run_surrogate_sweep(
         self, alpha_range: Tuple[float, float, int]
     ) -> Dict[str, Any]:
-        """Fall back to the PhysicsEngine surrogate results."""
-        from .analysis import physics
+        """Fall back to OpenVSPAdapter surrogate results."""
+        from .simulation.openvsp_adapter import OpenVSPAdapter
 
-        alphas = list(
-            range(
-                int(alpha_range[0]),
-                int(alpha_range[1]) + 1,
-                int((alpha_range[1] - alpha_range[0]) / max(1, alpha_range[2] - 1)),
-            )
-        )
+        alpha_start = float(alpha_range[0])
+        alpha_end = float(alpha_range[1])
+        n_pts = int(alpha_range[2])
 
-        # Capture metrics for multiple points (simplified)
-        sweep_data = []
-        for a in alphas:
-            # We use the physics engine's summary/metrics which are tuned for Long-EZ
-            # Note: real implementation would iterate physics.calculate_cl_cd(a)
-            sweep_data.append(
-                {
-                    "alpha": a,
-                    "cl": 0.1 * a,  # mockup
-                    "cm": -0.02,  # mockup
-                }
-            )
+        if n_pts > 1:
+            step = (alpha_end - alpha_start) / (n_pts - 1)
+            alphas = [alpha_start + i * step for i in range(n_pts)]
+        else:
+            alphas = [alpha_start]
 
-        return {
-            "mode": "surrogate",
-            "sweep": sweep_data,
-            "is_stable": physics.calculate_cg_envelope().is_stable,
-        }
+        adapter = OpenVSPAdapter()
+        polars = adapter.run_vspaero(alphas=alphas)
+        points = [
+            {"alpha_deg": p.alpha_deg, "cl": p.cl, "cd": p.cd, "cm": p.cm}
+            for p in polars
+        ]
+        return {"mode": "surrogate", "source": "openvsp_adapter", "points": points}
 
 
 # Singleton instance
 vsp_bridge = VSPIntegration()
+if vsp_bridge.has_vsp:
+    try:
+        vsp_version = vsp_bridge._vsp.GetVSPVersion()
+        logger.info("OpenVSP %s detected - native VSPAERO available", vsp_version)
+    except Exception:
+        logger.info("OpenVSP detected - native VSPAERO available")
