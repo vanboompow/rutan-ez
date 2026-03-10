@@ -42,9 +42,8 @@ class VSPIntegration:
         try:
             import openvsp as vsp
 
-            logger.info("OpenVSP Python API detected successfully.")
-            # VSP requires initialization
-            vsp.VSPCheckIsInit()
+            version = vsp.GetVSPVersion()
+            logger.info("OpenVSP %s detected successfully.", version)
             return vsp
         except ImportError:
             logger.warning(
