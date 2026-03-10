@@ -26,9 +26,9 @@ set -euo pipefail
 # Configuration
 # ---------------------------------------------------------------------------
 OPENVSP_VERSION="3.48.2"
-OPENVSP_DOWNLOAD_URL="https://github.com/OpenVSP/OpenVSP/releases/download/OpenVSP_${OPENVSP_VERSION}/OpenVSP-${OPENVSP_VERSION}-MacOS_arm64.zip"
+OPENVSP_DOWNLOAD_URL="https://openvsp.org/download.php?file=zips/current/mac/OpenVSP-${OPENVSP_VERSION}-macos-14-ARM64-Python3.13.zip"
 INSTALL_DIR="${HOME}/.local/openvsp"
-OPENVSP_EXTRACT_DIR="${INSTALL_DIR}/OpenVSP-${OPENVSP_VERSION}-MacOS_arm64"
+OPENVSP_EXTRACT_DIR="${INSTALL_DIR}/OpenVSP-${OPENVSP_VERSION}-macos-14-ARM64-Python3.13"
 ZIP_PATH="${INSTALL_DIR}/openvsp-${OPENVSP_VERSION}-macos-arm64.zip"
 
 # ---------------------------------------------------------------------------
@@ -124,31 +124,51 @@ fi
 # ---------------------------------------------------------------------------
 info "Locating OpenVSP Python bindings..."
 
-# OpenVSP bundles bindings in a python/ subdirectory containing openvsp.so or openvsp*.so
+# OpenVSP 3.48+ bundles bindings as a Python package:
+#   .../python/openvsp/openvsp/__init__.py  (the importable package)
+#   .../python/openvsp/setup.py
+# The .pth file must point to .../python/openvsp/ so `import openvsp` finds __init__.py
 PYTHON_BINDINGS_DIR=""
+
+# Strategy 1: Look for the package-style layout (3.48+)
 for candidate in \
-    "${OPENVSP_EXTRACT_DIR}/python" \
-    "${OPENVSP_EXTRACT_DIR}/OpenVSP.app/Contents/python" \
-    "${OPENVSP_EXTRACT_DIR}/OpenVSP.app/Contents/Resources/python"; do
-    if [[ -d "$candidate" ]]; then
-        # Verify it actually has the binding
+    "${OPENVSP_EXTRACT_DIR}/python/openvsp" \
+    "${OPENVSP_EXTRACT_DIR}/OpenVSP.app/Contents/python/openvsp"; do
+    if [[ -f "$candidate/openvsp/__init__.py" ]]; then
+        PYTHON_BINDINGS_DIR="$candidate"
+        break
+    fi
+done
+
+# Strategy 2: Look for flat .so layout (older versions)
+if [[ -z "$PYTHON_BINDINGS_DIR" ]]; then
+    for candidate in \
+        "${OPENVSP_EXTRACT_DIR}/python" \
+        "${OPENVSP_EXTRACT_DIR}/OpenVSP.app/Contents/python"; do
         if ls "$candidate"/openvsp*.so &>/dev/null 2>&1 || ls "$candidate"/_openvsp*.so &>/dev/null 2>&1; then
             PYTHON_BINDINGS_DIR="$candidate"
             break
         fi
-    fi
-done
+    done
+fi
 
+# Strategy 3: Search for __init__.py or .so
 if [[ -z "$PYTHON_BINDINGS_DIR" ]]; then
     warn "Could not auto-detect bindings directory. Searching..."
-    PYTHON_BINDINGS_DIR=$(find "${OPENVSP_EXTRACT_DIR}" -name "openvsp*.so" -o -name "_openvsp*.so" 2>/dev/null \
-        | head -1 | xargs dirname 2>/dev/null || true)
+    INIT_PY=$(find "${OPENVSP_EXTRACT_DIR}" -path "*/openvsp/__init__.py" 2>/dev/null | head -1)
+    if [[ -n "$INIT_PY" ]]; then
+        # Point to parent of the openvsp/ package dir
+        PYTHON_BINDINGS_DIR=$(dirname "$(dirname "$INIT_PY")")
+    else
+        PYTHON_BINDINGS_DIR=$(find "${OPENVSP_EXTRACT_DIR}" -name "openvsp*.so" -o -name "_openvsp*.so" 2>/dev/null \
+            | head -1 | xargs dirname 2>/dev/null || true)
+    fi
 fi
 
 if [[ -z "$PYTHON_BINDINGS_DIR" ]]; then
-    error "Could not find OpenVSP Python bindings (.so files) in the bundle."
+    error "Could not find OpenVSP Python bindings in the bundle."
     error "Bundle structure:"
-    find "${OPENVSP_EXTRACT_DIR}" -maxdepth 4 -name "*.so" | head -20
+    find "${OPENVSP_EXTRACT_DIR}" -maxdepth 5 \( -name "*.so" -o -name "__init__.py" \) | head -20
     error ""
     error "Please check the OpenVSP bundle structure and update this script,"
     error "or manually add the python/ directory to your PYTHONPATH:"
@@ -159,18 +179,22 @@ fi
 info "Found Python bindings: ${PYTHON_BINDINGS_DIR}"
 
 # ---------------------------------------------------------------------------
-# Step 5: Install .pth file into site-packages
+# Step 5: Install OpenVSP packages via pip
 # ---------------------------------------------------------------------------
-info "Installing .pth file into Python site-packages..."
+info "Installing OpenVSP Python packages via pip..."
 
-SITE_PACKAGES=$("$PYTHON313" -c "import site; print(site.getsitepackages()[0])")
-PTH_FILE="${SITE_PACKAGES}/openvsp.pth"
+PYTHON_ROOT="${OPENVSP_EXTRACT_DIR}/python"
 
-info "Site-packages: ${SITE_PACKAGES}"
-info "PTH file: ${PTH_FILE}"
-
-echo "${PYTHON_BINDINGS_DIR}" > "${PTH_FILE}"
-info "Written: ${PTH_FILE} -> ${PYTHON_BINDINGS_DIR}"
+# Install packages in dependency order
+for pkg in openvsp_config utilities degen_geom vsp_airfoils openvsp; do
+    PKG_DIR="${PYTHON_ROOT}/${pkg}"
+    if [[ -d "$PKG_DIR" && -f "$PKG_DIR/setup.py" ]]; then
+        info "Installing ${pkg}..."
+        "$PYTHON313" -m pip install --break-system-packages "$PKG_DIR" 2>&1 | tail -1
+    else
+        warn "Package ${pkg} not found at ${PKG_DIR}, skipping"
+    fi
+done
 
 # ---------------------------------------------------------------------------
 # Step 6: Smoke test
