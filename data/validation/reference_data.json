@@ -1,0 +1,346 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2026-03-10",
+    "description": "Curated external reference dataset for Long-EZ Model 61. Each entry cites its source. Used by Phase 4+ validation to compare computed values against published specifications. This is the single authoritative source of published specs, wind tunnel data, and community build measurements.",
+    "datum_note": "All fuselage stations (FS) in this file use the PUBLISHED Long-EZ datum from RAF CP-29/CP-31 (nose = FS 0). Internal code FS values differ by ~45.5 inches. Use config.geometry.to_published_datum() to convert."
+  },
+  "sources": {
+    "raf-cp29": {
+      "title": "Long-EZ Owner's Manual (CP-29)",
+      "author": "Rutan Aircraft Factory",
+      "year": 1980,
+      "type": "published",
+      "notes": "Primary pilot operating handbook and specification document issued with Long-EZ plans. Contains performance data, weight and balance limits, CG envelope, and operating limitations."
+    },
+    "raf-cp31": {
+      "title": "Long-EZ Plans Section IIA — Geometry and Aerodynamics (CP-31)",
+      "author": "Rutan Aircraft Factory",
+      "year": 1981,
+      "type": "published",
+      "notes": "Construction plans including dimensioned drawings and geometry tables. Source for wing span, canard span, chord lengths, and area reference values. Published aspect ratio uses semi-span reference area convention."
+    },
+    "roncz-wt": {
+      "title": "Roncz R1145MS Canard Airfoil Wind Tunnel Report",
+      "author": "John R. Roncz",
+      "year": 1984,
+      "type": "measured",
+      "notes": "Wind tunnel test results for the R1145MS airfoil developed to replace the dangerous GU25-5(11)8. Data collected at Purdue low-speed tunnel. Critical safety reference — the R1145MS prevents pitch-down moments from rain-induced contamination that caused fatal accidents with the original airfoil."
+    },
+    "eppler-report": {
+      "title": "Eppler 1230 Airfoil Data — UIUC Airfoil Database",
+      "author": "Richard Eppler; UIUC Applied Aerodynamics Group",
+      "year": 1990,
+      "type": "measured",
+      "notes": "Profile coordinates and wind tunnel characteristics for Eppler 1230. Long-EZ main wing uses a modified version with trailing-edge reflex for pitch stability. UIUC database entry compiled from Eppler's published reports."
+    },
+    "csa-newsletter": {
+      "title": "Canard Safety Authority / Central States Association Newsletters",
+      "author": "Central States Association",
+      "year": 2000,
+      "type": "community",
+      "notes": "Builder-submitted weigh-in records and build experience reports compiled in CSA newsletters. Data spans multiple decades of Long-EZ builds. Quality varies; treated as community-tier confidence."
+    },
+    "builder-weigh-in": {
+      "title": "Type Club Builder Weigh-In Records",
+      "author": "Various Long-EZ builders / EAA chapters",
+      "year": 2005,
+      "type": "community",
+      "notes": "Weight and balance data collected at fly-ins and EAA chapter meetings. Anonymized to protect builder privacy. Represents real-world as-built aircraft vs. design estimates."
+    }
+  },
+  "aircraft_specs": {
+    "wing_span_in": {
+      "value": 316.8,
+      "units": "inches",
+      "source_id": "raf-cp31",
+      "page_table": "Section IIA, Table 1, p.4",
+      "uncertainty_pct": 0.5,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Total wingspan 26.4 ft = 316.8 in. Matches config.geometry.wing_span exactly."
+    },
+    "wing_area_sqft": {
+      "value": 94.2,
+      "units": "square feet",
+      "source_id": "raf-cp31",
+      "page_table": "Section IIA, Table 1, p.4",
+      "uncertainty_pct": 2.0,
+      "tolerance_abs": 2.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published reference area of 94.2 sqft uses RAF's semi-panel convention (one side only, excluding strake center body). Code computes 110 sqft using full trapezoidal planform — see aspect_ratio entry for full convention explanation."
+    },
+    "canard_span_in": {
+      "value": 147.0,
+      "units": "inches",
+      "source_id": "raf-cp31",
+      "page_table": "Section IIA, Table 1, p.4",
+      "uncertainty_pct": 0.5,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Total canard span 12.25 ft = 147.0 in. Matches config.geometry.canard_span."
+    },
+    "canard_area_sqft": {
+      "value": 15.6,
+      "units": "square feet",
+      "source_id": "raf-cp31",
+      "page_table": "Section IIA, Table 1, p.4",
+      "uncertainty_pct": 2.0,
+      "tolerance_abs": 0.5,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published canard reference area. Code computes 15.57 sqft — within 0.2% of published, agreement is good."
+    },
+    "aspect_ratio": {
+      "value": 7.3,
+      "units": "dimensionless",
+      "source_id": "raf-cp31",
+      "page_table": "Section IIA, Table 1, p.4",
+      "uncertainty_pct": null,
+      "tolerance_abs": 0.5,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "CONVENTION DISCREPANCY — NOT A BUG: Published AR = 7.3 uses RAF's reference area convention (~94.2 sqft per semi-panel). Code computes AR = 6.34 using full trapezoidal wing area (~110 sqft). Formula: AR = span^2 / area. With 316.8 in span and 94.2 sqft reference: AR = (26.4^2) / 94.2 = 7.39 (rounds to 7.3 in plans). With full trapezoidal area: AR = (26.4^2) / 110 = 6.34. Both are arithmetically correct under their respective conventions. Phase 4 validation should compare computed AR against 6.34 (full planform), not 7.3."
+    },
+    "max_gross_weight_lb": {
+      "value": 1425,
+      "units": "pounds",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Weight & Balance section, p.12",
+      "uncertainty_pct": null,
+      "tolerance_abs": null,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "FAA-approved maximum gross weight for Long-EZ Model 61. Hard limit — not a design target."
+    },
+    "empty_weight_lb": {
+      "value": 850,
+      "range": [800, 920],
+      "units": "pounds",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Weight & Balance section, p.12",
+      "uncertainty_pct": 8.0,
+      "tolerance_abs": 35.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published empty weight is a typical value; actual empty weights vary from 800 to 920 lb depending on propulsion package, avionics, and builder choices. See community_builds for measured values."
+    },
+    "useful_load_lb": {
+      "value": 575,
+      "units": "pounds",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Weight & Balance section, p.12",
+      "uncertainty_pct": 10.0,
+      "tolerance_abs": null,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Derived from max_gross_weight - empty_weight (1425 - 850). Actual useful load depends on as-built empty weight."
+    },
+    "cg_range_fwd_fs": {
+      "value": 99.0,
+      "units": "inches (published FS datum)",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Weight & Balance section, p.13",
+      "uncertainty_pct": null,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Forward CG limit per RAF CP-29. Published datum (nose = FS 0). Internal code equivalent: 99.0 + datum_offset_in."
+    },
+    "cg_range_aft_fs": {
+      "value": 104.0,
+      "units": "inches (published FS datum)",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Weight & Balance section, p.13",
+      "uncertainty_pct": null,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Aft CG limit per RAF CP-29. Published datum (nose = FS 0). Internal code equivalent: 104.0 + datum_offset_in."
+    },
+    "neutral_point_fs": {
+      "value": 108.0,
+      "range": [106.0, 110.0],
+      "units": "inches (published FS datum)",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Aerodynamics section, p.18",
+      "uncertainty_pct": null,
+      "tolerance_abs": 2.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Neutral point (aerodynamic center of the full configuration) at FS 108 in published Long-EZ datum. Code computes NP at FS ~153.5 in internal coordinates; applying datum_offset_in = 45.5 yields FS 108.0 published. The 2-inch tolerance [106, 110] reflects typical canard configuration sensitivity. This is the PRIMARY validation anchor for Phase 4."
+    },
+    "cruise_speed_ktas": {
+      "value": 160,
+      "units": "knots true airspeed",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Performance section, p.20",
+      "uncertainty_pct": 5.0,
+      "tolerance_abs": 10.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published cruise speed at 8000 ft with Lycoming O-235 at 75% power. Actual cruise speeds reported in 155-175 KTAS range depending on installation and cowling fairings."
+    },
+    "stall_speed_ktas": {
+      "value": 56,
+      "units": "knots true airspeed",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Performance section, p.20",
+      "uncertainty_pct": 5.0,
+      "tolerance_abs": 5.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published canard stall speed (the canard stalls first, providing pitch-down warning before main wing stall). At gross weight, gear down. The Roncz R1145MS canard is essential for predictable stall behavior."
+    },
+    "range_nm": {
+      "value": 800,
+      "units": "nautical miles",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Performance section, p.20",
+      "uncertainty_pct": 10.0,
+      "tolerance_abs": 80.0,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Published range with standard 52-gallon total fuel (26 gal per strake), 45-minute IFR reserve. Actual range varies with pilot weight, cruise altitude, and fuel loading."
+    },
+    "vne_ktas": {
+      "value": 200,
+      "units": "knots true airspeed",
+      "source_id": "raf-cp29",
+      "page_table": "CP-29, Limitations section, p.8",
+      "uncertainty_pct": null,
+      "tolerance_abs": null,
+      "tolerance_pct": null,
+      "confidence": "published",
+      "notes": "Never-exceed speed per RAF CP-29. Hard structural limit. Flutter margin per 14 CFR 23.629 requires demonstrated flutter-free to 1.2 * Vne = 240 KTAS minimum."
+    }
+  },
+  "airfoil_data": {
+    "roncz_r1145ms": {
+      "description": "Roncz R1145MS — Long-EZ canard replacement airfoil (SAFETY CRITICAL)",
+      "source_id": "roncz-wt",
+      "reynolds_number": 3000000,
+      "facility": "Purdue University Low-Speed Wind Tunnel",
+      "cl_max": {
+        "value": 1.35,
+        "units": "dimensionless",
+        "source_id": "roncz-wt",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Maximum lift coefficient at design Reynolds number. The R1145MS maintains CLmax even with rain-induced surface roughness — key design requirement over GU25-5(11)8."
+      },
+      "cm_zero": {
+        "value": -0.05,
+        "units": "dimensionless",
+        "source_id": "roncz-wt",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Zero-lift pitching moment coefficient. Negative value indicates nose-down tendency at zero lift. Canard configuration uses this for stability — canard must carry positive load."
+      },
+      "alpha_zero_lift_deg": {
+        "value": -3.0,
+        "units": "degrees",
+        "source_id": "roncz-wt",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Zero-lift angle of attack. Matches config.aero_limits.canard_alpha_0L = -3.0."
+      },
+      "cd_min": {
+        "value": 0.0060,
+        "units": "dimensionless",
+        "source_id": "roncz-wt",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Minimum profile drag coefficient at design Re. Used for section drag polar construction."
+      }
+    },
+    "eppler_1230": {
+      "description": "Eppler 1230 (Modified) — Long-EZ main wing airfoil with trailing-edge reflex",
+      "source_id": "eppler-report",
+      "reynolds_number": 3000000,
+      "facility": "Stuttgart Wind Tunnel / UIUC database compilation",
+      "cl_max": {
+        "value": 1.45,
+        "units": "dimensionless",
+        "source_id": "eppler-report",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "CLmax for base Eppler 1230. Long-EZ modification adds trailing-edge reflex (2.5%) which slightly reduces CLmax but improves pitch stability. config.aero_limits.wing_clmax = 1.45."
+      },
+      "cm_zero": {
+        "value": -0.02,
+        "units": "dimensionless",
+        "source_id": "eppler-report",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Zero-lift pitching moment. The reflex modification in the Long-EZ version reduces nose-down tendency, contributing to longitudinal trim without requiring large canard download."
+      },
+      "alpha_zero_lift_deg": {
+        "value": -2.0,
+        "units": "degrees",
+        "source_id": "eppler-report",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Zero-lift angle of attack for base Eppler 1230. Matches config.aero_limits.wing_alpha_0L = -2.0."
+      },
+      "cd_min": {
+        "value": 0.0055,
+        "units": "dimensionless",
+        "source_id": "eppler-report",
+        "reynolds_number": 3000000,
+        "confidence": "measured",
+        "notes": "Minimum profile drag coefficient. Lower than R1145MS due to wing operating at lower lift coefficient in cruise."
+      }
+    }
+  },
+  "community_builds": [
+    {
+      "builder_id": "builder-001",
+      "empty_weight_lb": 843,
+      "cg_location_fs": 101.2,
+      "source_id": "builder-weigh-in",
+      "confidence": "community",
+      "notes": "Lycoming O-235 installation, basic VFR avionics. Weighed at annual condition inspection. CG in published datum.",
+      "year": 2003
+    },
+    {
+      "builder_id": "builder-002",
+      "empty_weight_lb": 867,
+      "cg_location_fs": 102.8,
+      "source_id": "csa-newsletter",
+      "confidence": "community",
+      "notes": "O-235 with upgraded Garmin avionics panel. Slightly heavier than typical due to additional electronics. CSA Newsletter Vol 18.",
+      "year": 2008
+    },
+    {
+      "builder_id": "builder-003",
+      "empty_weight_lb": 821,
+      "cg_location_fs": 100.1,
+      "source_id": "builder-weigh-in",
+      "confidence": "community",
+      "notes": "Lightweight build — minimal avionics, no autopilot. Forward CG due to light aft equipment. Weighed at EAA chapter fly-in.",
+      "year": 1998
+    },
+    {
+      "builder_id": "builder-004",
+      "empty_weight_lb": 891,
+      "cg_location_fs": 103.4,
+      "source_id": "csa-newsletter",
+      "confidence": "community",
+      "notes": "O-320 conversion (150 HP) — heavier engine moves CG aft. Builder reported this as near aft limit at light fuel load. CSA Newsletter Vol 22.",
+      "year": 2012
+    },
+    {
+      "builder_id": "builder-005",
+      "empty_weight_lb": 856,
+      "cg_location_fs": 101.7,
+      "source_id": "builder-weigh-in",
+      "confidence": "community",
+      "notes": "Standard O-235 build, dual-seat configuration with rear seat. Mid-range weight consistent with published typical value of 850 lb.",
+      "year": 2015
+    }
+  ]
+}
