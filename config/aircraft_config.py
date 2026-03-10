@@ -125,6 +125,14 @@ class GeometricParams:
     # Note: Previously estimated at ~51". Actual offset derived from NP comparison.
     # internal_fs - datum_offset_in = published_fs
 
+    # === OPENVSP GEOMETRY (positions for 3D model) ===
+    wing_le_wl: float = 0.0  # Wing LE waterline, Z position in inches (at longeron level)
+    canard_le_wl: float = 12.0  # Canard LE waterline, ~12" above longerons on Long-EZ
+    winglet_height: float = 16.0  # Winglet vertical span in inches (Long-EZ winglets, Rutan Ch.19)
+    winglet_root_chord: float = 20.0  # Winglet root chord at wing tip junction (inches)
+    winglet_tip_chord: float = 12.0  # Winglet tip chord (inches)
+    fuselage_length: float = 214.0  # Total fuselage length nose to tail (= fs_tail, inches)
+
     # === CANARD DOWNWASH ===
     canard_vertical_offset_in: float = (
         12.0  # Vertical separation canard AC to wing plane
@@ -193,6 +201,16 @@ class GeometricParams:
         """Wing aspect ratio (span² / area)."""
         span_ft = self.wing_span / 12
         return (span_ft**2) / self.wing_area
+
+    @property
+    def wing_le_fs(self) -> float:
+        """Wing LE fuselage station (alias for fs_wing_le, used by OpenVSP geometry builder)."""
+        return self.fs_wing_le
+
+    @property
+    def canard_le_fs(self) -> float:
+        """Canard LE fuselage station (alias for fs_canard_le, used by OpenVSP geometry builder)."""
+        return self.fs_canard_le
 
     def to_published_datum(self, internal_fs: float) -> float:
         """Convert internal fuselage station to published Long-EZ datum.

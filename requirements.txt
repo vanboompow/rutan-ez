@@ -13,7 +13,7 @@ ezdxf>=1.1.0
 
 # OpenVSP Python API (optional - for aerodynamic validation)
 # Note: OpenVSP must be installed separately from openvsp.org
-# openvsp>=3.35.0
+# openvsp 3.48.2 — installed via scripts/install_openvsp.sh (not available on pip/conda)
 
 # Development/Testing
 pytest>=7.0.0
