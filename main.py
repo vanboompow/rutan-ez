@@ -88,6 +88,17 @@ def run_analysis():
     vsp3_path = runner.export_native_vsp3(vsp_dir / "long_ez.vsp3")
     print(f"  Native VSP model: {vsp3_path}")
 
+    # Run aerodynamic sweep (native VSPAERO or surrogate)
+    from core.vsp_integration import vsp_bridge
+    sweep_result = vsp_bridge.run_aerodynamic_sweep()
+    mode = sweep_result.get("mode", "unknown")
+    if mode == "native":
+        print("  Aerodynamic sweep: Using native VSPAERO")
+        n_pts = len(sweep_result.get("points", []))
+        print(f"  Polar data: {n_pts} points written to data/validation/vspaero_native_polars.json")
+    else:
+        print("  Aerodynamic sweep: Using surrogate (OpenVSP not installed)")
+
 
 def generate_manufacturing():
     """Generate physical production artifacts."""

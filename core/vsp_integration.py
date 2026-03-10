@@ -294,7 +294,14 @@ class VSPIntegration:
             {"alpha_deg": p.alpha_deg, "cl": p.cl, "cd": p.cd, "cm": p.cm}
             for p in polars
         ]
-        return {"mode": "surrogate", "source": "openvsp_adapter", "points": points}
+        # Include is_stable for backward compatibility with existing consumers
+        from .analysis import physics
+        return {
+            "mode": "surrogate",
+            "source": "openvsp_adapter",
+            "points": points,
+            "is_stable": physics.calculate_cg_envelope().is_stable,
+        }
 
 
 # Singleton instance
