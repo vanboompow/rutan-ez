@@ -223,6 +223,16 @@ class MaterialParams:
     spar_cap_width: float = 3.0  # Spar cap width (inches)
     spar_modulus_psi: float = 2.8e6  # Typical UNI glass modulus in bending
 
+    # === D-BOX SECTION (LE to spar) ===
+    dbox_chord_fraction: float = 0.25  # D-box extends from LE to this fraction of chord
+    dbox_skin_plies: int = 2  # BID plies per skin (upper + lower)
+    dbox_web_foam_thickness_in: float = 0.25  # Shear web foam core thickness
+    dbox_web_bid_plies: int = 1  # BID plies per face of web sandwich
+    spar_cap_ply_schedule: List[int] = field(
+        default_factory=lambda: [17, 17, 14, 11, 8]
+    )
+    # 5-station schedule: root to tip (root-root, 25%, 50%, 75%, tip)
+
     # === FOAM CORE ===
     wing_core_foam: FoamType = FoamType.STYROFOAM_BLUE
     fuselage_foam: FoamType = FoamType.URETHANE_2LB

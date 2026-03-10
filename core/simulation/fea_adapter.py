@@ -619,6 +619,206 @@ class CompositeFEAAdapter:
 
 
 # ---------------------------------------------------------------------------
+# D-box composite section model (replaces cap-only I-beam for deflection)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class DBoxSection:
+    """D-box composite section properties at a single spanwise station.
+
+    The D-box extends from leading edge to main spar (dbox_chord_fraction of chord).
+    Contributors to bending stiffness:
+    - Spar caps (UNI glass, top and bottom)
+    - Upper and lower D-box skins (BID glass)
+    - Shear web (foam-core sandwich with BID face sheets)
+
+    EI is computed via parallel axis theorem: sum of (EI_local + E*A*d^2) for each element.
+    """
+
+    chord_in: float
+    spar_cap_plies: int
+    dbox_skin_plies: int = 2
+    dbox_web_foam_thickness_in: float = 0.25
+    dbox_web_bid_plies: int = 1
+    dbox_chord_fraction: float = 0.25
+
+    @property
+    def dbox_depth_in(self) -> float:
+        """D-box depth: airfoil thickness ratio * chord at spar location.
+        Approximate 10% thickness ratio (typical for Eppler 1230 at 25% chord)."""
+        depth = self.chord_in * 0.10
+        spar_height = self.spar_cap_plies * config.materials.uni_ply_thickness
+        return max(depth, spar_height)
+
+    @property
+    def dbox_chord_in(self) -> float:
+        """D-box chordwise extent: LE to spar."""
+        return self.dbox_chord_fraction * self.chord_in
+
+    @property
+    def ei_bending(self) -> float:
+        """Total bending stiffness EI (lb-in^2) via parallel axis theorem.
+
+        Components:
+        1. Spar caps (top + bottom): EI_cap = E_uni * (w * t^3/12 + w*t * (d/2 - t/2)^2) * 2
+        2. D-box skins (top + bottom): EI_skin = E_bid * (chord * t_skin^3/12 + chord*t_skin * (d/2)^2) * 2
+        3. Shear web: EI_web = E_web * (t_web * d^3/12) (centered, no parallel axis offset)
+        """
+        mat = config.materials
+        d = self.dbox_depth_in  # section depth
+
+        # Spar cap contribution (2 caps, top and bottom)
+        E_uni = UNI_GLASS_PROPERTIES["E1"]
+        cap_t = self.spar_cap_plies * mat.uni_ply_thickness
+        cap_w = mat.spar_cap_width
+        cap_d = (d - cap_t) / 2  # distance from NA to cap centroid
+        EI_caps = 2 * E_uni * (cap_w * cap_t**3 / 12 + cap_w * cap_t * cap_d**2)
+
+        # D-box skin contribution (2 skins, top and bottom)
+        E_bid = BID_GLASS_PROPERTIES["E1"]
+        skin_t = self.dbox_skin_plies * mat.bid_ply_thickness
+        skin_w = self.dbox_chord_in
+        skin_d = d / 2  # skins at outer surface
+        EI_skins = 2 * E_bid * (skin_w * skin_t**3 / 12 + skin_w * skin_t * skin_d**2)
+
+        # Shear web contribution (single web at spar, centered)
+        web_bid_t = self.dbox_web_bid_plies * mat.bid_ply_thickness * 2  # both face sheets
+        web_foam_t = self.dbox_web_foam_thickness_in
+        web_total_t = web_bid_t + web_foam_t
+        # Use BID modulus for face sheets (foam modulus negligible)
+        EI_web = E_bid * (web_total_t * d**3 / 12)
+
+        return EI_caps + EI_skins + EI_web
+
+
+@dataclass
+class DBoxResult:
+    """Result of D-box beam deflection analysis."""
+
+    tip_deflection_in: float
+    max_stress_psi: float
+    station_ei: List[float]  # EI at each spanwise station
+    n_stations: int
+
+
+class DBoxBeamAdapter:
+    """D-box composite beam analysis with spanwise-varying EI.
+
+    Computes deflection by numerical integration of M(x)/(EI(x)) over the span
+    using trapezoidal rule. Section properties vary station-by-station due to
+    chord taper and spar cap ply schedule.
+    """
+
+    def __init__(self, n_stations: int = None):
+        mat = config.materials
+        self.n_stations = max(n_stations or len(mat.spar_cap_ply_schedule), 5)
+        self.ply_schedule = mat.spar_cap_ply_schedule
+
+    def _build_stations(self, span_in: float) -> List[Tuple[float, "DBoxSection"]]:
+        """Build DBoxSection at each spanwise station with tapered chord and ply count."""
+        mat = config.materials
+        geo = config.geometry
+        root_chord = geo.wing_root_chord
+        tip_chord = geo.wing_tip_chord
+
+        stations = []
+        for i in range(self.n_stations):
+            eta = i / (self.n_stations - 1)  # 0 at root, 1 at tip
+            y = eta * span_in
+            chord = root_chord + eta * (tip_chord - root_chord)
+
+            # Interpolate ply count from schedule
+            sched = self.ply_schedule
+            frac = eta * (len(sched) - 1)
+            idx = int(frac)
+            if idx >= len(sched) - 1:
+                plies = sched[-1]
+            else:
+                t = frac - idx
+                plies = round(sched[idx] * (1 - t) + sched[idx + 1] * t)
+
+            section = DBoxSection(
+                chord_in=chord,
+                spar_cap_plies=plies,
+                dbox_skin_plies=mat.dbox_skin_plies,
+                dbox_web_foam_thickness_in=mat.dbox_web_foam_thickness_in,
+                dbox_web_bid_plies=mat.dbox_web_bid_plies,
+                dbox_chord_fraction=mat.dbox_chord_fraction,
+            )
+            stations.append((y, section))
+        return stations
+
+    def analyze_elliptic_dbox(
+        self, span_in: float, total_load_lbf: float
+    ) -> DBoxResult:
+        """Compute tip deflection under elliptic load distribution with tapered D-box EI.
+
+        Uses numerical double integration:
+        1. M(y) = integral from y to L of q(s)*(s-y) ds  (bending moment)
+        2. theta(y) = integral from 0 to y of M(s)/EI(s) ds  (slope)
+        3. delta(y) = integral from 0 to y of theta(s) ds  (deflection)
+
+        For elliptic load: q(y) = (4*P)/(pi*L) * sqrt(1 - (y/L)^2) where P = total_load
+        """
+        stations = self._build_stations(span_in)
+        n = self.n_stations
+        L = span_in
+        P = total_load_lbf
+
+        ys = np.array([s[0] for s in stations])
+        EIs = np.array([s[1].ei_bending for s in stations])
+
+        # Use a fine grid for numerical integration
+        n_fine = max(201, n * 10)
+        y_fine = np.linspace(0, L, n_fine)
+        q_fine = (4 * P) / (math.pi * L) * np.sqrt(
+            np.maximum(1 - (y_fine / L) ** 2, 0)
+        )
+
+        # Compute M(y) at each fine grid point
+        M_fine = np.zeros(n_fine)
+        for i in range(n_fine):
+            # M(y_i) = integral from y_i to L of q(s)*(s - y_i) ds
+            mask = y_fine >= y_fine[i]
+            s_vals = y_fine[mask]
+            q_vals = q_fine[mask]
+            integrand = q_vals * (s_vals - y_fine[i])
+            M_fine[i] = np.trapezoid(integrand, s_vals)
+
+        # Interpolate EI to fine grid
+        EI_fine = np.interp(y_fine, ys, EIs)
+
+        # Curvature: kappa(y) = M(y) / EI(y)
+        kappa_fine = M_fine / EI_fine
+
+        # Slope: theta(y) = integral_0^y kappa(s) ds
+        theta_fine = np.zeros(n_fine)
+        for i in range(1, n_fine):
+            theta_fine[i] = np.trapezoid(kappa_fine[: i + 1], y_fine[: i + 1])
+
+        # Deflection: delta(y) = integral_0^y theta(s) ds
+        delta_fine = np.zeros(n_fine)
+        for i in range(1, n_fine):
+            delta_fine[i] = np.trapezoid(theta_fine[: i + 1], y_fine[: i + 1])
+
+        tip_deflection = delta_fine[-1]
+
+        # Max bending stress at root (maximum moment, maximum distance from NA)
+        root_section = stations[0][1]
+        c_root = root_section.dbox_depth_in / 2
+        # sigma = E * kappa * c
+        sigma_max = UNI_GLASS_PROPERTIES["E1"] * kappa_fine[0] * c_root
+
+        return DBoxResult(
+            tip_deflection_in=tip_deflection,
+            max_stress_psi=sigma_max,
+            station_ei=EIs.tolist(),
+            n_stations=n,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Torsional stiffness (Bredt-Batho) and Flutter analysis
 # ---------------------------------------------------------------------------
 
