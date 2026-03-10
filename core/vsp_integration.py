@@ -185,14 +185,25 @@ class VSPIntegration:
         vsp.SetGeomName(fuse_id, "Fuselage")
         vsp.SetParmVal(fuse_id, "Length", "Design", geom.fuselage_length)
 
+        # 1b. Finalize geometry and write to disk for VSPAERO
+        vsp.Update()
+        vsp3_path = str(Path("output/VSP/long_ez_vspaero.vsp3").resolve())
+        vsp.SetVSP3FileName(vsp3_path)
+        vsp.WriteVSPFile(vsp3_path)
+        logger.info("VSP model written to %s", vsp3_path)
+
+        # Compute DegenGeom — VSPAERO reads these files, not the .vsp3 directly
+        vsp.ComputeDegenGeom(vsp.SET_ALL, vsp.DEGEN_GEOM_CSV_TYPE)
+
+        # Set reference wing for VSPAERO Sref/bref/cref
+        vsp.SetVSPAERORefWingID(wing_id)
+
         # 2. Set up VSPAERO analysis
         alpha_start = float(alpha_range[0])
         alpha_end = float(alpha_range[1])
         n_pts = int(alpha_range[2])
 
         vsp.SetAnalysisInputDefaults("VSPAEROSweep")
-        # VLM method (0 = VLM, 1 = Panel)
-        vsp.SetIntAnalysisInput("VSPAEROSweep", "AnalysisMethod", [0])
         # Alpha sweep
         vsp.SetDoubleAnalysisInput("VSPAEROSweep", "AlphaStart", [alpha_start])
         vsp.SetDoubleAnalysisInput("VSPAEROSweep", "AlphaEnd", [alpha_end])
