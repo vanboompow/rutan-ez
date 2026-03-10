@@ -30,10 +30,11 @@ __all__ = [
     "PhysicsEngine",
     "VSPBridge",
     "StabilityMetrics",
+    "physics",
+    # Weight & Balance (own module, also re-exported from core.analysis)
     "WeightBalance",
     "WeightItem",
-    "physics",
-    # OpenVSP Runner
+    # OpenVSP Runner (own module, also re-exported from core.analysis)
     "OpenVSPRunner",
     "AerodynamicPoint",
     "TrimSweepResult",
@@ -55,21 +56,26 @@ _LAZY_IMPORTS = {
     "ComplianceTaskTracker": "core.compliance",
     "TaskRole": "core.compliance",
     "GCodeWriter": "core.manufacturing",
-    "JigFactory": "core.manufacturing",
     "GCodeConfig": "core.manufacturing",
     "CutPath": "core.manufacturing",
+    # JigFactory lives in core.jig_factory; also re-exported by core.manufacturing
+    "JigFactory": "core.jig_factory",
+    # Analysis module (PhysicsEngine, VSPBridge, StabilityMetrics)
     "PhysicsEngine": "core.analysis",
     "VSPBridge": "core.analysis",
     "StabilityMetrics": "core.analysis",
-    "WeightBalance": "core.analysis",
-    "WeightItem": "core.analysis",
     "physics": "core.analysis",
-    "OpenVSPRunner": "core.analysis",
-    "AerodynamicPoint": "core.analysis",
-    "TrimSweepResult": "core.analysis",
-    "CLMaxResult": "core.analysis",
-    "StructuralMeshManifest": "core.analysis",
-    "openvsp_runner": "core.analysis",
+    # Weight & Balance — canonical home is core.weight_balance
+    "WeightBalance": "core.weight_balance",
+    "WeightItem": "core.weight_balance",
+    # OpenVSP Runner — canonical home is core.openvsp_runner
+    "OpenVSPRunner": "core.openvsp_runner",
+    "AerodynamicPoint": "core.openvsp_runner",
+    "TrimSweepResult": "core.openvsp_runner",
+    "CLMaxResult": "core.openvsp_runner",
+    "StructuralMeshManifest": "core.openvsp_runner",
+    "openvsp_runner": "core.openvsp_runner",
+    # Atmosphere
     "atmosphere": "core.atmosphere",
 }
 

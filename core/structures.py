@@ -22,11 +22,10 @@ from config import config
 from .base import AircraftComponent, FoamCore
 from .aerodynamics import Airfoil, AirfoilFactory
 
-# NOTE: Circular dependency — manufacturing.py TYPE_CHECKING-imports
-# BulkheadProfile and Fuselage from this module.  This runtime import of
-# JigFactory is safe because manufacturing.py defers those imports behind
-# ``if TYPE_CHECKING``, avoiding a cycle at import time.
-from .manufacturing import JigFactory
+# NOTE: JigFactory extracted from manufacturing.py to jig_factory.py.
+# The circular dependency between structures ↔ manufacturing is documented
+# and stable (manufacturing uses TYPE_CHECKING for BulkheadProfile/Fuselage).
+from .jig_factory import JigFactory
 
 
 @dataclass

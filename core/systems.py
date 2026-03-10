@@ -25,7 +25,7 @@ import cadquery as cq
 
 from config import config
 from config.aircraft_config import PropulsionType
-from .analysis import WeightItem
+from .weight_balance import WeightItem
 
 
 class Propulsion(ABC):
