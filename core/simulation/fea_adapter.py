@@ -763,6 +763,33 @@ class DBoxBeamAdapter:
             stations.append((y, section))
         return stations
 
+    def estimate_dbox_weight_lb(self, span_in: float) -> float:
+        """Estimate D-box structural weight for one wing half (skins + web, excludes spar caps).
+
+        Weight = sum over stations of (skin_volume + web_volume) * density
+        Uses trapezoidal integration along span.
+        """
+        stations = self._build_stations(span_in)
+        mat = config.materials
+        bid_density = BID_GLASS_PROPERTIES["density"]  # lb/in^3
+
+        weights = []
+        for _, section in stations:
+            # Skin volume per unit span (2 skins, top + bottom)
+            skin_t = section.dbox_skin_plies * mat.bid_ply_thickness
+            skin_vol = 2 * section.dbox_chord_in * skin_t  # in^2/in
+
+            # Web volume per unit span (2 BID faces)
+            web_bid_t = section.dbox_web_bid_plies * mat.bid_ply_thickness * 2
+            web_vol = web_bid_t * section.dbox_depth_in  # in^2/in
+
+            weights.append((skin_vol + web_vol) * bid_density)
+
+        # Trapezoidal integration
+        ys = np.array([s[0] for s in stations])
+        ws = np.array(weights)
+        return float(np.trapezoid(ws, ys))
+
     def analyze_elliptic_dbox(
         self, span_in: float, total_load_lbf: float
     ) -> DBoxResult:
@@ -1027,23 +1054,27 @@ class FlutterEstimator:
         self.torsion_section = build_wing_torsion_section(self.chord_in)
 
     def bending_frequency_hz(self) -> float:
-        """Natural bending frequency for cantilevered beam (1st mode).
+        """Natural bending frequency (1st mode) using D-box EI.
 
         omega_h = (3.52 / L^2) * sqrt(EI / mu)
-        where mu = mass per unit length (lb/ft -> slug/in requires conversion)
+        Uses average D-box EI across span stations for representative stiffness.
         """
         L = self.span_in
-        beam = BeamFEAAdapter()
-        EI = beam.section.modulus_psi * beam.section.inertia  # lb-in^2
 
-        # Estimate wing mass per unit length from config
+        # D-box bending stiffness (average across span)
+        dbox = DBoxBeamAdapter()
+        half_span = config.geometry.wing_span / 2
+        stations = dbox._build_stations(half_span)
+        EI_values = [s[1].ei_bending for s in stations]
+        EI = sum(EI_values) / len(EI_values)  # Average EI
+
+        # Wing mass per unit length
         wing_weight_lb = config.structural_weights.wing_weight_lb
         half_span_in = config.geometry.wing_span / 2
-        # mu in slugs/in (weight / g / length)
         g = 386.1  # in/s^2
-        mu = wing_weight_lb / g / (2.0 * half_span_in)  # both halves contribute
+        mu = wing_weight_lb / g / (2.0 * half_span_in)
 
-        omega_h = (3.52 / L**2) * math.sqrt(EI / mu)  # rad/s
+        omega_h = (3.52 / L**2) * math.sqrt(EI / mu)
         return omega_h / (2.0 * math.pi)
 
     def torsion_frequency_hz(self) -> float:
