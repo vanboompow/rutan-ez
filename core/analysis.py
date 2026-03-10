@@ -61,18 +61,19 @@ class StabilityMetrics:
 
     def summary(self) -> str:
         """Generate human-readable stability summary."""
+        geo = config.geometry
         status = "STABLE" if self.is_stable else "UNSTABLE"
         return f"""
 Stability Analysis Summary
 ==========================
-Neutral Point:    {self.neutral_point:.2f} in (FS)
-Center of Gravity: {self.cg_location:.2f} in (FS)
+Neutral Point:    FS {self.neutral_point:.2f} (internal) / FS {geo.to_published_datum(self.neutral_point):.2f} (published)
+Center of Gravity: FS {self.cg_location:.2f} (internal) / FS {geo.to_published_datum(self.cg_location):.2f} (published)
 Mean Aero Chord:  {self.mac:.2f} in
 Static Margin:    {self.static_margin:.1f}% MAC
 
 CG Envelope:
-  Forward Limit:  {self.cg_range_fwd:.2f} in (FS)
-  Aft Limit:      {self.cg_range_aft:.2f} in (FS)
+  Forward Limit:  FS {self.cg_range_fwd:.2f} (internal) / FS {geo.to_published_datum(self.cg_range_fwd):.2f} (published)
+  Aft Limit:      FS {self.cg_range_aft:.2f} (internal) / FS {geo.to_published_datum(self.cg_range_aft):.2f} (published)
 
 Status: {status}
 """
