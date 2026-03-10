@@ -36,7 +36,7 @@ class AircraftAssembly(AircraftComponent):
         # Internal assembly store
         self._assembly = cq.Assembly(name=name)
 
-    def generate_geometry(self) -> cq.Workplane:
+    def _build_geometry(self) -> cq.Workplane:
         """Combine all components into a single B-Rep solid."""
         # Generate individual geometries
         wing_geo = self.wing.generate_geometry()

@@ -67,9 +67,9 @@ class TestCanardStallPriority:
             if "CLmax_canard=" in part:
                 val = float(part.split("=")[1].split(" ")[0])
                 # Should be less than reference 1.35
-                assert (
-                    val < config.aero_limits.canard_clmax
-                ), f"Scaled CLmax {val} not less than ref {config.aero_limits.canard_clmax}"
+                assert val < config.aero_limits.canard_clmax, (
+                    f"Scaled CLmax {val} not less than ref {config.aero_limits.canard_clmax}"
+                )
                 break
         else:
             raise AssertionError("CLmax_canard not found in message")
@@ -100,9 +100,9 @@ class TestDownwashModel:
 
             # More downwash (h=0) -> lower eta -> canard contributes less ->
             # NP shifts AFT toward wing AC (~150). So np_h0 > np_h100.
-            assert (
-                np_h0 > np_h100
-            ), f"NP at h=0 ({np_h0:.1f}) should be aft of NP at h=100 ({np_h100:.1f})"
+            assert np_h0 > np_h100, (
+                f"NP at h=0 ({np_h0:.1f}) should be aft of NP at h=100 ({np_h100:.1f})"
+            )
         finally:
             config.geometry.canard_vertical_offset_in = original_h
 

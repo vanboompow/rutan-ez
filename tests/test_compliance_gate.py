@@ -26,7 +26,7 @@ from config import config  # noqa: E402
 class _TestFoamCore(FoamCore):
     """Minimal concrete FoamCore for testing the compliance gate."""
 
-    def generate_geometry(self):
+    def _build_geometry(self):
         pass
 
     def export_dxf(self, output_path):

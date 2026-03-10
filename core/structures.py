@@ -21,7 +21,12 @@ import cadquery as cq
 from config import config
 from .base import AircraftComponent, FoamCore
 from .aerodynamics import Airfoil, AirfoilFactory
-from .manufacturing import JigFactory  # NEW Import
+
+# NOTE: Circular dependency — manufacturing.py TYPE_CHECKING-imports
+# BulkheadProfile and Fuselage from this module.  This runtime import of
+# JigFactory is safe because manufacturing.py defers those imports behind
+# ``if TYPE_CHECKING``, avoiding a cycle at import time.
+from .manufacturing import JigFactory
 
 
 @dataclass
@@ -147,7 +152,7 @@ class WingGenerator(FoamCore):
 
         return stations
 
-    def generate_geometry(self) -> cq.Workplane:
+    def _build_geometry(self) -> cq.Workplane:
         """
         Generate the lofted wing foam core.
 
@@ -558,6 +563,7 @@ class Fuselage(AircraftComponent):
 
         # Define key fuselage stations
         # These are derived from the SSOT, not hard-coded
+        bh = geo.fuselage_bulkhead_heights
         self._profiles = [
             BulkheadProfile(
                 station=geo.fs_nose, width=0.0, height=0.0, floor_height=0.0
@@ -565,26 +571,26 @@ class Fuselage(AircraftComponent):
             BulkheadProfile(
                 station=geo.fs_canard_le,
                 width=18.0,  # Derived from canard attachment
-                height=24.0,
+                height=bh[0],
                 floor_height=-8.0,
             ),
             BulkheadProfile(
                 station=geo.fs_pilot_seat,  # F-22
                 width=geo.cockpit_width,
-                height=38.0,
+                height=bh[1],
                 floor_height=-12.0,
             ),
             BulkheadProfile(
                 station=geo.fs_rear_seat,  # F-28
                 width=geo.cockpit_width - 2.0,  # Slight taper
-                height=34.0,
+                height=bh[2],
                 floor_height=-10.0,
             ),
             BulkheadProfile(
-                station=geo.fs_firewall, width=18.0, height=20.0, floor_height=-6.0
+                station=geo.fs_firewall, width=18.0, height=bh[3], floor_height=-6.0
             ),
             BulkheadProfile(
-                station=geo.fs_tail, width=6.0, height=8.0, floor_height=-2.0
+                station=geo.fs_tail, width=6.0, height=bh[4], floor_height=-2.0
             ),
         ]
 
@@ -612,7 +618,7 @@ class Fuselage(AircraftComponent):
         # Move to correct station along X axis
         return ellipse.val().moved(cq.Location(cq.Vector(profile.station, 0, 0)))
 
-    def generate_geometry(self) -> cq.Workplane:
+    def _build_geometry(self) -> cq.Workplane:
         """
         Generate fuselage OML via lofting.
 
@@ -697,7 +703,7 @@ class StrakeGenerator(AircraftComponent):
         self.side = side
         self._internal_structure: Optional[cq.Workplane] = None
 
-    def generate_geometry(self) -> cq.Workplane:
+    def _build_geometry(self) -> cq.Workplane:
         """
         Create strake solid using guide curves and loft.
 
@@ -915,9 +921,11 @@ class StrakeGenerator(AircraftComponent):
 
         elif self.mode == "battery":
             # LiFePO4 cell weight (100Ah prismatic ~6-7 lb each)
-            cells_per_module = strake_cfg.battery_cells_series  # 16S
+            cells_series = strake_cfg.battery_cells_series
+            cells_parallel = strake_cfg.battery_cells_parallel
+            cells_per_module = cells_series * cells_parallel
             cell_weight = 6.5  # lb per cell
-            module_weight = cells_per_module * cell_weight / 4  # 4P divides weight
+            module_weight = cells_per_module * cell_weight
 
             # Total battery weight in this strake
             weight = strake_cfg.battery_module_count * module_weight

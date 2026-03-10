@@ -43,7 +43,7 @@ class BeamFEAAdapter:
         section = section or BeamSection(
             width_in=config.materials.spar_cap_width,
             height_in=spar_height,
-            modulus_psi=2.8e6,  # typical UNI glass modulus in bending
+            modulus_psi=config.materials.spar_modulus_psi,
         )
         self.section = section
 
@@ -255,7 +255,7 @@ class BucklingAnalyzer:
         """
         # Estimate bending stress: sigma = M*c/I where M from distributed load
         # For a representative wing panel under g-load
-        gross_weight_lbf = 1425.0  # typical Long-EZ gross weight
+        gross_weight_lbf = config.flight_condition.gross_weight_lb
         half_span_in = config.geometry.wing_span / 2
         t = self.skin_thickness_in
         b = self.panel_width_in

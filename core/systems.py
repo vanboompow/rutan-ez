@@ -18,32 +18,14 @@ geometry to handle different torque loads from the electric motor.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 import math
 
 import cadquery as cq
 
 from config import config
 from config.aircraft_config import PropulsionType
-
-if TYPE_CHECKING:
-    from .analysis import WeightItem
-
-
-@dataclass
-class WeightItem:
-    """Single weight component for W&B calculations."""
-
-    name: str
-    weight_lb: float
-    arm_in: float  # CG arm from datum (FS inches)
-    category: str = "fixed"  # fixed, fuel, payload, propulsion
-
-    @property
-    def moment(self) -> float:
-        """Weight moment (lb-in)."""
-        return self.weight_lb * self.arm_in
+from .analysis import WeightItem
 
 
 class Propulsion(ABC):
@@ -97,13 +79,13 @@ class Propulsion(ABC):
 
     def get_total_weight(self) -> float:
         """Sum of all propulsion weight items."""
-        return sum(item.weight_lb for item in self.get_weight_items())
+        return sum(item.weight for item in self.get_weight_items())
 
     def get_propulsion_cg(self) -> float:
         """Compute propulsion system CG location."""
         items = self.get_weight_items()
         total_moment = sum(item.moment for item in items)
-        total_weight = sum(item.weight_lb for item in items)
+        total_weight = sum(item.weight for item in items)
         if total_weight > 0:
             return total_moment / total_weight
         return config.geometry.fs_firewall
@@ -120,14 +102,6 @@ class LycomingO235(Propulsion):
     - Fuel consumption: 6.5 GPH cruise
     """
 
-    # Engine specifications
-    DISPLACEMENT_CI = 235.0
-    RATED_HP = 115.0
-    RATED_RPM = 2700
-    DRY_WEIGHT_LB = 243.0
-    FUEL_GPH_CRUISE = 6.5
-    PROP_DIAMETER_IN = 60.0
-
     # Installation weights
     ENGINE_MOUNT_WEIGHT = 15.0  # Lord mount, tubes
     EXHAUST_WEIGHT = 12.0
@@ -138,6 +112,15 @@ class LycomingO235(Propulsion):
     def __init__(self):
         super().__init__("lycoming_o235")
         self.prop_efficiency = 0.82  # Typical cruise efficiency
+        # Engine specs sourced from config SSOT (instance attrs allow override
+        # for variant engines like O-320 in get_propulsion_system).
+        prop = config.propulsion
+        self.DISPLACEMENT_CI = prop.engine_displacement_ci
+        self.RATED_HP = prop.engine_rated_hp
+        self.RATED_RPM = prop.engine_rated_rpm
+        self.DRY_WEIGHT_LB = prop.engine_dry_weight_lb
+        self.FUEL_GPH_CRUISE = prop.fuel_consumption_gph
+        self.PROP_DIAMETER_IN = prop.engine_prop_diameter_in
 
     def get_weight_items(self) -> List[WeightItem]:
         """Return all engine installation weight items."""
@@ -146,38 +129,38 @@ class LycomingO235(Propulsion):
         return [
             WeightItem(
                 name="engine_dry",
-                weight_lb=self.DRY_WEIGHT_LB,
-                arm_in=fs_firewall + 8.0,  # Engine CG forward of firewall
+                weight=self.DRY_WEIGHT_LB,
+                arm=fs_firewall + 8.0,  # Engine CG forward of firewall
                 category="propulsion",
             ),
             WeightItem(
                 name="engine_mount",
-                weight_lb=self.ENGINE_MOUNT_WEIGHT,
-                arm_in=fs_firewall + 2.0,
+                weight=self.ENGINE_MOUNT_WEIGHT,
+                arm=fs_firewall + 2.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="exhaust_system",
-                weight_lb=self.EXHAUST_WEIGHT,
-                arm_in=fs_firewall + 12.0,
+                weight=self.EXHAUST_WEIGHT,
+                arm=fs_firewall + 12.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="baffles",
-                weight_lb=self.BAFFLES_WEIGHT,
-                arm_in=fs_firewall + 6.0,
+                weight=self.BAFFLES_WEIGHT,
+                arm=fs_firewall + 6.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="cowling",
-                weight_lb=self.COWLING_WEIGHT,
-                arm_in=fs_firewall + 15.0,
+                weight=self.COWLING_WEIGHT,
+                arm=fs_firewall + 15.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="propeller",
-                weight_lb=self.PROP_WEIGHT,
-                arm_in=fs_firewall + 20.0,
+                weight=self.PROP_WEIGHT,
+                arm=fs_firewall + 20.0,
                 category="propulsion",
             ),
         ]
@@ -387,38 +370,38 @@ class ElectricEZ(Propulsion):
         items = [
             WeightItem(
                 name="motor",
-                weight_lb=self.MOTOR_WEIGHT_LB,
-                arm_in=fs_firewall + 4.0,  # Motor is lighter, more forward
+                weight=self.MOTOR_WEIGHT_LB,
+                arm=fs_firewall + 4.0,  # Motor is lighter, more forward
                 category="propulsion",
             ),
             WeightItem(
                 name="controller",
-                weight_lb=self.CONTROLLER_WEIGHT_LB,
-                arm_in=fs_firewall - 5.0,  # Behind firewall
+                weight=self.CONTROLLER_WEIGHT_LB,
+                arm=fs_firewall - 5.0,  # Behind firewall
                 category="propulsion",
             ),
             WeightItem(
                 name="propeller",
-                weight_lb=self.PROP_WEIGHT_LB,
-                arm_in=fs_firewall + 12.0,
+                weight=self.PROP_WEIGHT_LB,
+                arm=fs_firewall + 12.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="wiring",
-                weight_lb=self.WIRING_WEIGHT_LB,
-                arm_in=(fs_firewall + strake_cg) / 2,  # Distributed
+                weight=self.WIRING_WEIGHT_LB,
+                arm=(fs_firewall + strake_cg) / 2,  # Distributed
                 category="propulsion",
             ),
             WeightItem(
                 name="cooling_system",
-                weight_lb=self.COOLING_WEIGHT_LB,
-                arm_in=fs_firewall - 2.0,
+                weight=self.COOLING_WEIGHT_LB,
+                arm=fs_firewall - 2.0,
                 category="propulsion",
             ),
             WeightItem(
                 name="battery_pack",
-                weight_lb=self.battery_weight_lb,
-                arm_in=strake_cg,  # Batteries in strakes
+                weight=self.battery_weight_lb,
+                arm=strake_cg,  # Batteries in strakes
                 category="propulsion",
             ),
         ]

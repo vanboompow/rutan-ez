@@ -453,8 +453,14 @@ class AirfoilFactory:
         """
         Parse UIUC-format .dat file.
 
-        Handles both Selig (single section, LE at x=0) and
-        Lednicer (upper/lower sections) formats.
+        Supports both common formats:
+        - **Selig**: First line is name, followed by continuous x y pairs
+          running from trailing edge around the upper surface, through the
+          leading edge (x ~ 0), and back along the lower surface.
+        - **Lednicer**: First line is name, second line contains two numbers
+          (upper and lower point counts), then upper surface coordinates,
+          a blank line, and lower surface coordinates (both running from
+          LE to TE).
         """
         if not filepath.exists():
             raise FileNotFoundError(f"Airfoil data file not found: {filepath}")
@@ -465,13 +471,44 @@ class AirfoilFactory:
         # First line is typically the name
         name = lines[0].strip()
 
-        # Parse coordinates
+        # --- Format detection ---
+        # Lednicer format: second non-blank line has exactly two numbers
+        # that represent upper and lower point counts.
+        is_lednicer = False
+        second_line = ""
+        for line in lines[1:]:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                second_line = stripped
+                break
+
+        parts_2 = second_line.split()
+        if len(parts_2) == 2:
+            try:
+                n_upper = float(parts_2[0])
+                n_lower = float(parts_2[1])
+                # Lednicer counts are typically integers like "33.  33." or "33 33"
+                if n_upper == int(n_upper) and n_lower == int(n_lower):
+                    n_upper = int(n_upper)
+                    n_lower = int(n_lower)
+                    # Sanity: counts should be reasonable (5-500 points)
+                    if 5 <= n_upper <= 500 and 5 <= n_lower <= 500:
+                        is_lednicer = True
+            except ValueError:
+                pass
+
+        if is_lednicer:
+            return self._parse_lednicer(name, lines, n_upper, n_lower)
+        else:
+            return self._parse_selig(name, lines)
+
+    def _parse_selig(self, name: str, lines: list) -> AirfoilCoordinates:
+        """Parse Selig-format .dat data (continuous x y pairs)."""
         coords = []
         for line in lines[1:]:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-
             parts = line.split()
             if len(parts) >= 2:
                 try:
@@ -482,14 +519,12 @@ class AirfoilFactory:
                     continue
 
         if len(coords) < 10:
-            raise ValueError(f"Insufficient coordinate data in {filepath}")
+            raise ValueError("Insufficient coordinate data (Selig)")
 
-        coords = np.array(coords)
-        x_all = coords[:, 0]
-        y_all = coords[:, 1]
+        coords_arr = np.array(coords)
+        x_all = coords_arr[:, 0]
+        y_all = coords_arr[:, 1]
 
-        # Detect format: Selig has LE near index 0, Lednicer has section break
-        # For now, assume Selig format (most common)
         le_idx = np.argmin(x_all)
 
         x_upper = x_all[: le_idx + 1][::-1]  # Reverse to go from LE to TE
@@ -503,6 +538,48 @@ class AirfoilFactory:
             y_upper=y_upper,
             x_lower=x_lower,
             y_lower=y_lower,
+        )
+
+    def _parse_lednicer(
+        self, name: str, lines: list, n_upper: int, n_lower: int
+    ) -> AirfoilCoordinates:
+        """Parse Lednicer-format .dat data (upper/lower sections separated by blank line)."""
+        # Skip name line and count line, then collect coordinate blocks
+        data_lines = lines[2:]  # After name and count line
+        upper_coords: list = []
+        lower_coords: list = []
+        current = upper_coords
+        switched = False
+
+        for line in data_lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                # Blank line separates upper from lower section
+                if upper_coords and not switched:
+                    current = lower_coords
+                    switched = True
+                continue
+            parts = stripped.split()
+            if len(parts) >= 2:
+                try:
+                    x = float(parts[0])
+                    y = float(parts[1])
+                    current.append((x, y))
+                except ValueError:
+                    continue
+
+        if len(upper_coords) < 5 or len(lower_coords) < 5:
+            raise ValueError("Insufficient coordinate data (Lednicer)")
+
+        upper = np.array(upper_coords)
+        lower = np.array(lower_coords)
+
+        return AirfoilCoordinates(
+            name=name,
+            x_upper=upper[:, 0],  # Lednicer upper runs LE -> TE
+            y_upper=upper[:, 1],
+            x_lower=lower[:, 0],  # Lednicer lower runs LE -> TE
+            y_lower=lower[:, 1],
         )
 
     def get_canard_airfoil(self) -> Airfoil:

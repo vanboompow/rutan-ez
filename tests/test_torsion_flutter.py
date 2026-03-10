@@ -104,9 +104,9 @@ class TestFlutterEstimator:
         # Recalculate GJ (it's a property, should auto-update)
         v_halved = est.flutter_speed_ktas()
 
-        assert (
-            v_halved < v_original
-        ), f"Halved GJ flutter speed {v_halved:.0f} not less than original {v_original:.0f}"
+        assert v_halved < v_original, (
+            f"Halved GJ flutter speed {v_halved:.0f} not less than original {v_original:.0f}"
+        )
 
     def test_flutter_check_returns_all_fields(self):
         """check_flutter() must return all required diagnostic fields."""

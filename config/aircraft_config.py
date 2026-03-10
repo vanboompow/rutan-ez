@@ -10,6 +10,7 @@ Safety Mandate: Roncz R1145MS canard airfoil is the DEFAULT.
 The original GU25-5(11)8 caused dangerous pitch-down in rain.
 """
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -124,6 +125,10 @@ class GeometricParams:
         12.0  # Vertical separation canard AC to wing plane
     )
 
+    # === FUSELAGE BULKHEAD HEIGHTS ===
+    # Heights at key stations: canard LE, pilot seat, rear seat, firewall, tail
+    fuselage_bulkhead_heights: Tuple[float, ...] = (24.0, 38.0, 34.0, 20.0, 8.0)
+
     # === ERGONOMICS ===
     cockpit_width: float = 23.0  # F-22 interior width
     pilot_height_max: float = 77.0  # Max pilot height (inches)
@@ -135,7 +140,6 @@ class GeometricParams:
 
         Uses MAC-based quarter chord with sweep offset for both surfaces.
         """
-        import math
 
         # Wing AC: MAC quarter-chord with sweep offset
         taper_w = self.wing_tip_chord / self.wing_root_chord
@@ -197,6 +201,7 @@ class MaterialParams:
     # === SPAR CAP LAYUP (Long-EZ specific) ===
     spar_cap_plies: int = 17  # UNI plies for main spar cap
     spar_cap_width: float = 3.0  # Spar cap width (inches)
+    spar_modulus_psi: float = 2.8e6  # Typical UNI glass modulus in bending
 
     # === FOAM CORE ===
     wing_core_foam: FoamType = FoamType.STYROFOAM_BLUE
@@ -430,6 +435,13 @@ class PropulsionConfig:
     fuel_capacity_gal: float = 52.0  # Total fuel (26 gal per strake)
     fuel_consumption_gph: float = 6.5  # Cruise consumption
 
+    # === IC ENGINE SPECS (Lycoming O-235-L2C) ===
+    engine_dry_weight_lb: float = 243.0  # Dry weight with accessories
+    engine_displacement_ci: float = 235.0
+    engine_rated_hp: float = 115.0
+    engine_rated_rpm: int = 2700
+    engine_prop_diameter_in: float = 60.0
+
     # === ELECTRIC DEFAULTS (LiFePO4) ===
     motor_mass_kg: float = 35.0  # EMRAX 228 MV
     motor_power_kw: float = 100.0  # 134 hp continuous
@@ -483,6 +495,7 @@ class FlightConditionParams:
     design_altitude_ft: float = 8000.0  # Primary design altitude
     v_ne_ktas: float = 200.0  # Never-exceed speed (KTAS)
     approach_speed_ktas: float = 60.0  # Estimated approach speed for stall check
+    gross_weight_lb: float = 1425.0  # Typical Long-EZ gross weight
 
     # === PILOT / PAYLOAD RANGES (for CG envelope) ===
     pilot_weight_min_lb: float = 150.0
@@ -621,12 +634,22 @@ class AircraftConfig:
             )
 
         # STABILITY CHECK: Canard must stall before wing
-        # (simplified check - full analysis requires OpenVSP)
-        canard_loading = 1.0  # placeholder
-        wing_loading = 1.0  # placeholder
-        if canard_loading < wing_loading:
+        # Simplified thin-airfoil lift curve slope: a0 = 2*pi per radian
+        a0_per_deg = 2.0 * math.pi / 180.0  # ~0.1097 per degree
+        # Stall AoA in aircraft frame = alpha_0L + CLmax/a0 - incidence
+        canard_stall_aoa = (
+            self.aero_limits.canard_alpha_0L
+            + self.aero_limits.canard_clmax / a0_per_deg
+            - self.geometry.canard_incidence
+        )
+        wing_stall_aoa = (
+            self.aero_limits.wing_alpha_0L + self.aero_limits.wing_clmax / a0_per_deg
+        )
+        stall_margin = wing_stall_aoa - canard_stall_aoa
+        if stall_margin < self.aero_limits.min_stall_margin_deg:
             errors.append(
-                "STABILITY WARNING: Canard loading may not ensure canard-first stall. "
+                f"STABILITY WARNING: Canard-first stall margin is {stall_margin:.1f} deg, "
+                f"below minimum {self.aero_limits.min_stall_margin_deg:.1f} deg. "
                 "Run OpenVSP analysis to verify."
             )
 

@@ -41,6 +41,7 @@ class AircraftComponent(ABC):
         self.name = name
         self.description = description
         self._geometry: Optional[cq.Workplane] = None
+        self._cached_geometry: Optional[cq.Workplane] = None
         self._metadata: Dict[str, Any] = {}
 
     @property
@@ -53,13 +54,27 @@ class AircraftComponent(ABC):
             )
         return self._geometry
 
-    @abstractmethod
     def generate_geometry(self) -> cq.Workplane:
         """
-        Generate the CadQuery solid geometry.
+        Generate the CadQuery solid geometry, returning cached result if available.
+
+        Subclasses implement ``_build_geometry()`` instead of overriding this
+        method directly.  Call ``invalidate_geometry()`` to force a rebuild.
 
         Returns:
             CadQuery Workplane containing the 3D solid.
+        """
+        if self._cached_geometry is not None:
+            return self._cached_geometry
+        result = self._build_geometry()
+        self._cached_geometry = result
+        self._geometry = result
+        return result
+
+    @abstractmethod
+    def _build_geometry(self) -> cq.Workplane:
+        """
+        Build the CadQuery solid geometry (called by ``generate_geometry``).
 
         Implementation must:
         1. Use config parameters (never hard-code dimensions)
@@ -67,6 +82,11 @@ class AircraftComponent(ABC):
         3. Return the geometry
         """
         pass
+
+    def invalidate_geometry(self) -> None:
+        """Clear cached geometry so the next ``generate_geometry()`` rebuilds."""
+        self._cached_geometry = None
+        self._geometry = None
 
     @abstractmethod
     def export_dxf(self, output_path: Path) -> Path:
@@ -265,7 +285,7 @@ class Bulkhead(AircraftComponent):
         """Return the 2D bulkhead outline."""
         pass
 
-    def generate_geometry(self) -> cq.Workplane:
+    def _build_geometry(self) -> cq.Workplane:
         """Extrude the 2D bulkhead profile to the specified thickness."""
         profile = self.get_profile()
         self._geometry = cq.Workplane("XY").add(profile).extrude(self.thickness)

@@ -17,6 +17,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# NOTE: Circular dependency — structures.py runtime-imports JigFactory from
+# this module.  The imports below MUST stay behind TYPE_CHECKING to break the
+# cycle; they are only needed for type annotations, not at runtime.
 if TYPE_CHECKING:
     from .base import FoamCore
     from .structures import BulkheadProfile, Fuselage
@@ -746,12 +749,15 @@ class JigFactory:
             def __init__(self):
                 super().__init__("placeholder", "Placeholder for jig generation")
 
-            def generate_geometry(self):
+            def _build_geometry(self):
                 self._geometry = cq.Workplane("XY").box(100, 50, 5)
                 return self._geometry
 
             def export_dxf(self, path):
                 return path
+
+            def manufacturing_plan(self, output_path):
+                return {}
 
         placeholder = PlaceholderWing()
 

@@ -54,9 +54,9 @@ def test_washout_positive_le_moves_down():
     washed = airfoil.apply_washout(1.0)
     x_out, y_out = washed.coordinates
     le_idx = np.argmin(x_out)
-    assert (
-        y_out[le_idx] < -1e-6
-    ), f"After +1 deg washout, LE y should be negative, got {y_out[le_idx]:.8f}"
+    assert y_out[le_idx] < -1e-6, (
+        f"After +1 deg washout, LE y should be negative, got {y_out[le_idx]:.8f}"
+    )
 
 
 def test_washout_negative_le_moves_up():
@@ -68,9 +68,9 @@ def test_washout_negative_le_moves_up():
     washed = airfoil.apply_washout(-1.0)
     x_out, y_out = washed.coordinates
     le_idx = np.argmin(x_out)
-    assert (
-        y_out[le_idx] > 1e-6
-    ), f"After -1 deg washout, LE y should be positive, got {y_out[le_idx]:.8f}"
+    assert y_out[le_idx] > 1e-6, (
+        f"After -1 deg washout, LE y should be positive, got {y_out[le_idx]:.8f}"
+    )
 
 
 def test_washout_zero_preserves_shape():

@@ -132,9 +132,9 @@ class TestPointLoadDeflection:
         result_2 = adapter.analyze_cantilever(span_in=L, tip_load_lbf=200.0)
 
         ratio = result_2.tip_deflection_in / result_1.tip_deflection_in
-        assert (
-            abs(ratio - 2.0) < 0.001
-        ), f"Deflection should scale linearly with load. Ratio: {ratio:.6f}"
+        assert abs(ratio - 2.0) < 0.001, (
+            f"Deflection should scale linearly with load. Ratio: {ratio:.6f}"
+        )
 
 
 class TestDistributedLoadDeflection:
@@ -250,9 +250,9 @@ class TestBeamSectionProperties:
 
         section = BeamSection(width_in=3.0, height_in=0.153, modulus_psi=2.8e6)
         expected = (3.0 * 0.153**3) / 12.0
-        assert (
-            abs(section.inertia - expected) < 1e-12
-        ), f"Inertia mismatch: {section.inertia} vs {expected}"
+        assert abs(section.inertia - expected) < 1e-12, (
+            f"Inertia mismatch: {section.inertia} vs {expected}"
+        )
 
     def test_spar_section_from_config(self):
         """Verify default spar section matches config values."""
