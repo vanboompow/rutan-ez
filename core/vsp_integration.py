@@ -192,8 +192,10 @@ class VSPIntegration:
         vsp.WriteVSPFile(vsp3_path)
         logger.info("VSP model written to %s", vsp3_path)
 
-        # Compute DegenGeom — VSPAERO reads these files, not the .vsp3 directly
-        vsp.ComputeDegenGeom(vsp.SET_ALL, vsp.DEGEN_GEOM_CSV_TYPE)
+        # Export VSPGEOM — VSPAERO v7.x reads .vspgeom files (not old .vspaero DegenGeom)
+        vspgeom_path = vsp3_path.replace(".vsp3", ".vspgeom")
+        vsp.ExportFile(vspgeom_path, vsp.SET_ALL, vsp.EXPORT_VSPGEOM)
+        logger.info("VSPGEOM exported to %s", vspgeom_path)
 
         # Set reference wing for VSPAERO Sref/bref/cref
         vsp.SetVSPAERORefWingID(wing_id)
