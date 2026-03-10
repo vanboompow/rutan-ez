@@ -215,17 +215,17 @@ class TestWeightItem:
     """Tests for the WeightItem dataclass."""
 
     def test_moment_calculation(self):
-        """moment = weight_lb * arm_in."""
+        """moment = weight * arm."""
         from core.systems import WeightItem
 
-        item = WeightItem(name="engine", weight_lb=243.0, arm_in=188.0)
+        item = WeightItem(name="engine", weight=243.0, arm=188.0)
         assert item.moment == pytest.approx(243.0 * 188.0)
 
     def test_zero_weight_zero_moment(self):
         """Zero weight must give zero moment."""
         from core.systems import WeightItem
 
-        item = WeightItem(name="ghost_item", weight_lb=0.0, arm_in=100.0)
+        item = WeightItem(name="ghost_item", weight=0.0, arm=100.0)
         assert item.moment == 0.0
 
 
