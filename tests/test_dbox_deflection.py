@@ -187,3 +187,85 @@ class TestDBoxBeamAdapter:
         assert abs(ratio - 2.0) < 0.05, (
             f"Deflection should scale linearly. Ratio: {ratio:.4f} (expected ~2.0)"
         )
+
+
+class TestNominalSparCheckDBox:
+    """nominal_spar_check() must return D-box results alongside cap-only legacy keys."""
+
+    def test_dbox_tip_deflection_key_exists(self):
+        """nominal_spar_check() must return 'dbox_tip_deflection_in' key."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "dbox_tip_deflection_in" in result, (
+            f"Missing 'dbox_tip_deflection_in' key. Keys: {list(result.keys())}"
+        )
+
+    def test_dbox_tip_deflection_range(self):
+        """D-box tip deflection should be in 1-15 inch range."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        defl = result["dbox_tip_deflection_in"]
+        assert 1.0 <= defl <= 15.0, (
+            f"D-box tip deflection = {defl:.2f} in, expected 1-15 in range"
+        )
+
+    def test_legacy_tip_deflection_preserved(self):
+        """nominal_spar_check() must still return 'tip_deflection_in' (cap-only, backward compat)."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "tip_deflection_in" in result, (
+            "Missing legacy 'tip_deflection_in' key — breaks RegressionRunner"
+        )
+        assert "max_stress_psi" in result, (
+            "Missing legacy 'max_stress_psi' key — breaks RegressionRunner"
+        )
+
+    def test_dbox_spar_cap_tsai_wu_margin(self):
+        """Spar cap Tsai-Wu margin must be positive (structure adequate)."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "dbox_spar_cap_tsai_wu_margin" in result
+        assert result["dbox_spar_cap_tsai_wu_margin"] > 0, (
+            f"Spar cap Tsai-Wu margin = {result['dbox_spar_cap_tsai_wu_margin']:.4f}, must be > 0"
+        )
+
+    def test_dbox_skin_tsai_wu_margin(self):
+        """D-box skin Tsai-Wu margin must be positive."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "dbox_skin_tsai_wu_margin" in result
+        assert result["dbox_skin_tsai_wu_margin"] > 0, (
+            f"D-box skin Tsai-Wu margin = {result['dbox_skin_tsai_wu_margin']:.4f}, must be > 0"
+        )
+
+    def test_dbox_web_shear_margin(self):
+        """Shear web margin must be positive."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "dbox_web_shear_margin" in result
+        assert result["dbox_web_shear_margin"] > 0, (
+            f"Web shear margin = {result['dbox_web_shear_margin']:.4f}, must be > 0"
+        )
+
+    def test_dbox_foam_compression_margin(self):
+        """Foam compression margin must be positive."""
+        from core.simulation.fea_adapter import BeamFEAAdapter
+
+        adapter = BeamFEAAdapter()
+        result = adapter.nominal_spar_check()
+        assert "dbox_foam_compression_margin" in result
+        assert result["dbox_foam_compression_margin"] > 0, (
+            f"Foam compression margin = {result['dbox_foam_compression_margin']:.4f}, must be > 0"
+        )
