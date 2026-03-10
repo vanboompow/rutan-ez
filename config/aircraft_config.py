@@ -120,6 +120,11 @@ class GeometricParams:
     fs_firewall: float = 180.0  # Engine firewall (F-28)
     fs_tail: float = 214.0  # Tail cone terminus
 
+    # === DATUM OFFSET (internal -> published coordinate translation) ===
+    datum_offset_in: float = 45.5  # Internal FS 153.5 maps to published FS ~108 (RAF CP-29)
+    # Note: Previously estimated at ~51". Actual offset derived from NP comparison.
+    # internal_fs - datum_offset_in = published_fs
+
     # === CANARD DOWNWASH ===
     canard_vertical_offset_in: float = (
         12.0  # Vertical separation canard AC to wing plane
@@ -188,6 +193,21 @@ class GeometricParams:
         """Wing aspect ratio (span² / area)."""
         span_ft = self.wing_span / 12
         return (span_ft**2) / self.wing_area
+
+    def to_published_datum(self, internal_fs: float) -> float:
+        """Convert internal fuselage station to published Long-EZ datum.
+
+        The internal coordinate system uses a different zero reference than
+        the published Rutan plans. This method translates internal FS values
+        to the published coordinate system for human-readable output.
+
+        Args:
+            internal_fs: Fuselage station in internal coordinates (inches)
+
+        Returns:
+            Fuselage station in published Long-EZ datum (inches)
+        """
+        return internal_fs - self.datum_offset_in
 
 
 @dataclass
