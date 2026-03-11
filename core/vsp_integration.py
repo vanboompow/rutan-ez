@@ -192,9 +192,17 @@ class VSPIntegration:
         vsp.WriteVSPFile(vsp3_path)
         logger.info("VSP model written to %s", vsp3_path)
 
-        # Export VSPGEOM — VSPAERO v7.x reads .vspgeom files (not old .vspaero DegenGeom)
+        # Classify lifting surfaces as thin for VLM analysis
+        THIN_SET = vsp.SET_FIRST_USER  # User set 3
+        vsp.SetSetFlag(wing_id, THIN_SET, True)
+        vsp.SetSetFlag(canard_id, THIN_SET, True)
+        vsp.SetSetFlag(winglet_id, THIN_SET, True)
+
+        # Export VSPGEOM with proper thin/thick classification:
+        # thick_set=SET_ALL (fuselage as displacement body)
+        # thin_set=THIN_SET (wings/canard/winglet as VLM panels)
         vspgeom_path = vsp3_path.replace(".vsp3", ".vspgeom")
-        vsp.ExportFile(vspgeom_path, vsp.SET_ALL, vsp.EXPORT_VSPGEOM)
+        vsp.ExportFile(vspgeom_path, vsp.SET_ALL, vsp.EXPORT_VSPGEOM, False, THIN_SET)
         logger.info("VSPGEOM exported to %s", vspgeom_path)
 
         # Set reference wing for VSPAERO Sref/bref/cref
