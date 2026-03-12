@@ -7,6 +7,7 @@ Python 3.13 (with openvsp, native path).
 
 import json
 import sys
+import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -20,6 +21,101 @@ try:
     HAS_OPENVSP = True
 except ImportError:
     pass
+
+
+# ---------------------------------------------------------------------------
+# Helpers: mock VSP + fake .polar file
+# ---------------------------------------------------------------------------
+
+_ALPHAS_19 = [float(a) for a in range(-4, 15)]
+_CLS_19 = [0.08 * a for a in _ALPHAS_19]
+_CDS_19 = [0.020 + 0.001 * abs(a) for a in _ALPHAS_19]
+_CMS_19 = [-0.02 - 0.001 * a for a in _ALPHAS_19]
+
+
+def _write_fake_polar(path: Path, alphas=None, cls=None, cds=None, cms=None) -> None:
+    """Write a minimal VSPAERO .polar file with the expected 3-line header format."""
+    if alphas is None:
+        alphas, cls, cds, cms = _ALPHAS_19, _CLS_19, _CDS_19, _CMS_19
+
+    # 3 header lines matching real VSPAERO .polar format
+    header = (
+        "                                                                    "
+        "Surface Integration Forces and Moments -->\n"
+        "                                                                    "
+        "Surf-Surf-\n"
+    )
+    # Column header line — must include the 4 columns we parse
+    col_header = (
+        "      Beta             Mach             AoA             Re/1e6"
+        "             CLo             CLi            CLtot"
+        "              CDo              CDi             CDtot"
+        "              CSo              CSi            CStot"
+        "               L/D              E"
+        "               CMox             CMoy             CMoz"
+        "             CMix             CMiy             CMiz"
+        "             CMxtot           CMytot           CMztot\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        f.write(header)
+        f.write(col_header)
+        for aoa, cl, cd, cm in zip(alphas, cls, cds, cms):
+            # 23 columns; we only fill in the ones we parse
+            row = (
+                f"  0.000000000000   0.000000000000"
+                f"   {aoa:.6f}  10.000000000000"
+                f"   0.000000   {cl:.6f}   {cl:.6f}"  # CLo, CLi, CLtot
+                f"   0.000000   {cd:.6f}   {cd:.6f}"  # CDo, CDi, CDtot
+                f"   0.000000   0.000000   0.000000"  # CSo, CSi, CStot
+                f"   0.000000   0.000000"  # L/D, E
+                f"   0.000000   0.000000   0.000000"  # CMox, CMoy, CMoz
+                f"   0.000000   {cm:.6f}   0.000000"  # CMix, CMiy, CMiz
+                f"   0.000000   {cm:.6f}   0.000000\n"  # CMxtot, CMytot, CMztot
+            )
+            f.write(row)
+
+
+def _make_vsp_mock(tmp_path: Path) -> MagicMock:
+    """
+    Build a minimal mock of the openvsp module for schema tests.
+
+    The mock patches ExecAnalysis to write a fake .polar file at the path
+    VSPAERO would produce, so _parse_vspaero_polar() finds real data.
+    """
+    vsp = MagicMock()
+    vsp.GetVSPVersion.return_value = "3.48.2-mock"
+    vsp.SET_NONE = -1
+    vsp.SET_ALL = 0
+    vsp.EXPORT_VSPGEOM = 5  # arbitrary int
+
+    # AddGeom returns a fake geom ID
+    vsp.AddGeom.return_value = "MOCKGEOMID"
+
+    # ExportFile writes a minimal .vspgeom placeholder
+    def mock_export_file(path, *args, **kwargs):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_text("# vspgeom v3\n1\n1 1 1\n")
+
+    vsp.ExportFile.side_effect = mock_export_file
+
+    # ExecAnalysis writes a fake .polar file alongside the .vsp3 set by SetVSP3FileName
+    _vsp3_path: list = []
+
+    def mock_set_vsp3(path):
+        _vsp3_path.clear()
+        _vsp3_path.append(path)
+
+    vsp.SetVSP3FileName.side_effect = mock_set_vsp3
+
+    def mock_exec_analysis(name):
+        if _vsp3_path:
+            polar_path = Path(_vsp3_path[0]).with_suffix(".polar")
+            _write_fake_polar(polar_path)
+        return "results_001"
+
+    vsp.ExecAnalysis.side_effect = mock_exec_analysis
+    return vsp
 
 
 # ---------------------------------------------------------------------------
@@ -54,32 +150,9 @@ def test_surrogate_fallback_when_openvsp_unavailable():
 # ---------------------------------------------------------------------------
 
 
-def _make_vsp_mock():
-    """Build a minimal mock of the openvsp module for schema tests."""
-    vsp = MagicMock()
-    vsp.GetVSPVersion.return_value = "3.48.2-mock"
-
-    # ExecAnalysis returns a fake results ID
-    vsp.ExecAnalysis.return_value = "results_001"
-
-    # GetDoubleResults returns 19-point arrays for CL/CD/CMy
-    n = 19
-    alphas = [float(a) for a in range(-4, 15)]
-    cls = [0.08 * a for a in alphas]
-    cds = [0.020 + 0.001 * abs(a) for a in alphas]
-    cms = [-0.02 - 0.001 * a for a in alphas]
-
-    def get_double_results(res_id, key, *args, **kwargs):
-        mapping = {"CL": cls, "CD": cds, "CMy": cms, "CDi": cds, "CDo": cds}
-        return mapping.get(key, [0.0] * n)
-
-    vsp.GetDoubleResults.side_effect = get_double_results
-    return vsp
-
-
 def test_native_return_schema_with_mock_vsp(tmp_path):
     """_run_native_sweep() returns correct schema when vsp mock is injected."""
-    vsp_mock = _make_vsp_mock()
+    vsp_mock = _make_vsp_mock(tmp_path)
 
     from core.vsp_integration import VSPIntegration
 
@@ -110,7 +183,7 @@ def test_native_return_schema_with_mock_vsp(tmp_path):
 
 def test_native_alpha_sweep_range(tmp_path):
     """Native sweep uses exactly -4 to 14 deg in 1-deg steps = 19 points."""
-    vsp_mock = _make_vsp_mock()
+    vsp_mock = _make_vsp_mock(tmp_path)
 
     from core.vsp_integration import VSPIntegration
 
@@ -133,7 +206,7 @@ def test_native_alpha_sweep_range(tmp_path):
 
 def test_polar_file_written_after_native_sweep(tmp_path):
     """After native sweep, vspaero_native_polars.json exists with correct schema."""
-    vsp_mock = _make_vsp_mock()
+    vsp_mock = _make_vsp_mock(tmp_path)
 
     from core.vsp_integration import VSPIntegration
 
@@ -156,7 +229,30 @@ def test_polar_file_written_after_native_sweep(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test 5: Runtime fallback — if _run_native_sweep raises, returns surrogate
+# Test 5a: _parse_vspaero_polar unit test — reads correctly from fake .polar file
+# ---------------------------------------------------------------------------
+
+
+def test_parse_vspaero_polar_unit(tmp_path):
+    """_parse_vspaero_polar() correctly parses a fake .polar file."""
+    from core.vsp_integration import VSPIntegration
+
+    polar_path = tmp_path / "test.polar"
+    _write_fake_polar(polar_path)
+
+    alphas, cls, cds, cms = VSPIntegration._parse_vspaero_polar(polar_path, 19)
+
+    assert len(alphas) == 19
+    assert alphas[0] == pytest.approx(-4.0, abs=0.01)
+    assert alphas[-1] == pytest.approx(14.0, abs=0.01)
+    # CL at alpha=4 (index 8) should be 0.08 * 4 = 0.32
+    assert cls[8] == pytest.approx(0.32, abs=0.01)
+    # All CDs should be positive
+    assert all(cd > 0 for cd in cds)
+
+
+# ---------------------------------------------------------------------------
+# Test 5b: Runtime fallback — if _run_native_sweep raises, returns surrogate
 # ---------------------------------------------------------------------------
 
 
