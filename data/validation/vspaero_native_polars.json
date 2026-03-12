@@ -1,7 +1,7 @@
 {
   "source": "vspaero_native",
   "vsp_version": "3.48.2-mock",
-  "timestamp": "2026-03-12T01:29:41.149922+00:00",
+  "timestamp": "2026-03-12T01:40:05.953741+00:00",
   "solver_settings": {
     "method": "VLM",
     "mach": 0.0,
