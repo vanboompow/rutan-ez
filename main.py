@@ -37,16 +37,21 @@ def validate_config() -> bool:
 
 
 def validate_physics() -> bool:
-    """Run lightweight physics regressions against stored baselines."""
-    from core.simulation.regression import RegressionRunner
+    """Run physics regressions against externally-validated accuracy report baselines.
+
+    Phase 6: Baselines now come from data/validation/accuracy_report.json
+    (calibrated against reference_data.json / published Long-EZ specs and wind
+    tunnel data), not from the self-referential tests/snapshots/physics_baseline.json.
+    Every baseline value traces to an external source.
+    """
+    from core.simulation.regression import RegressionRunner, DEFAULT_ACCURACY_REPORT
 
     print("\n--- Validating Physics Models ---")
     report_dir = project_root / "output" / "reports"
-    baseline = project_root / "tests" / "snapshots" / "physics_baseline.json"
 
     runner = RegressionRunner()
-    passed, current, failures = runner.compare_to_baseline(
-        baseline_path=baseline, report_dir=report_dir
+    passed, current, failures = runner.compare_to_accuracy_report(
+        accuracy_report_path=DEFAULT_ACCURACY_REPORT, report_dir=report_dir
     )
 
     if passed:
