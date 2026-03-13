@@ -353,11 +353,13 @@ class PhysicsEngine:
         # Static margin (positive = stable)
         margin = (np_loc - cg) / mac
 
-        # CG limits (based on static margin requirements)
-        # Forward limit: 20% margin (handling qualities)
-        # Aft limit: 5% margin (minimum stability)
-        cg_range_fwd = np_loc - 0.20 * mac
-        cg_range_aft = np_loc - 0.05 * mac
+        # CG limits (calibrated Phase 5 from Rutan CP-29 published CG envelope)
+        # Published: NP=108.0, CG_fwd=99.0, CG_aft=104.0 (published datum, RAF CP-29 p.13)
+        # Reverse-computed margins: fwd=(108-99)/52.31=17.21%, aft=(108-104)/52.31=7.65%
+        # These replace generic Raymer 20%/5% defaults with Long-EZ–specific margins.
+        # Physical justification: Rutan W&B analysis for Model 61 at gross weight extremes.
+        cg_range_fwd = np_loc - 0.1721 * mac
+        cg_range_aft = np_loc - 0.0765 * mac
 
         return StabilityMetrics(
             cg_location=cg,

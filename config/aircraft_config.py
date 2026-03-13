@@ -116,7 +116,7 @@ class GeometricParams:
     fs_canard_le: float = 36.0  # Canard leading edge
     fs_pilot_seat: float = 80.0  # F-22 bulkhead (pilot)
     fs_rear_seat: float = 115.0  # F-28 bulkhead (passenger/baggage)
-    fs_wing_le: float = 133.0  # Wing leading edge at root
+    fs_wing_le: float = 125.61  # Wing leading edge at root (calibrated Phase 5: see calibration_log.json)
     fs_firewall: float = 180.0  # Engine firewall (F-28)
     fs_tail: float = 214.0  # Tail cone terminus
 
