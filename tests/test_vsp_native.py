@@ -159,7 +159,9 @@ def test_native_return_schema_with_mock_vsp(tmp_path):
     bridge = VSPIntegration(output_dir=tmp_path / "vsp")
     bridge._vsp = vsp_mock
 
-    result = bridge._run_native_sweep((-4, 14, 19))
+    # Use tmp_path to avoid overwriting real data/validation/vspaero_native_polars.json
+    # with mock data (vsp_version would contain "mock", breaking test_cross_validation.py)
+    result = bridge._run_native_sweep((-4, 14, 19), polar_output=tmp_path / "native_polars.json")
 
     assert result["mode"] == "native"
     assert result["source"] == "vspaero_native"
@@ -190,7 +192,9 @@ def test_native_alpha_sweep_range(tmp_path):
     bridge = VSPIntegration(output_dir=tmp_path / "vsp")
     bridge._vsp = vsp_mock
 
-    result = bridge._run_native_sweep((-4, 14, 19))
+    # Use tmp_path to avoid overwriting real data/validation/vspaero_native_polars.json
+    # with mock data (same isolation fix as test_native_return_schema_with_mock_vsp)
+    result = bridge._run_native_sweep((-4, 14, 19), polar_output=tmp_path / "native_polars.json")
 
     pts = result["points"]
     assert len(pts) == 19
