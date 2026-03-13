@@ -394,21 +394,44 @@ def collect_metrics(
         tolerance_abs=ew_entry.get("tolerance_abs"),
         tolerance_pct=ew_entry.get("tolerance_pct"),
     )
-    metrics.append(
-        {
-            "metric_id": "empty_weight_lb",
-            "description": "Estimated empty weight (structural + propulsion components)",
-            "computed": round(computed_empty_weight, 4),
-            "reference": ew_entry["value"],
-            "tolerance_abs": ew_entry.get("tolerance_abs"),
-            "tolerance_pct": ew_entry.get("tolerance_pct"),
-            "error_abs": ew_err_abs,
-            "error_pct": ew_err_pct,
-            "grade": ew_grade,
-            "source": "reference_data.json:aircraft_specs.empty_weight_lb",
-            "units": "pounds",
+    # Build metric dict as variable to allow adding community_validation field
+    community_builds = ref_data.get("community_builds", [])
+    ew_metric: dict = {
+        "metric_id": "empty_weight_lb",
+        "description": "Estimated empty weight (structural + propulsion components)",
+        "computed": round(computed_empty_weight, 4),
+        "reference": ew_entry["value"],
+        "tolerance_abs": ew_entry.get("tolerance_abs"),
+        "tolerance_pct": ew_entry.get("tolerance_pct"),
+        "error_abs": ew_err_abs,
+        "error_pct": ew_err_pct,
+        "grade": ew_grade,
+        "source": "reference_data.json:aircraft_specs.empty_weight_lb",
+        "units": "pounds",
+    }
+    if community_builds:
+        community_weights = [b["empty_weight_lb"] for b in community_builds]
+        ew_metric["convention_note"] = (
+            "Config structural weights are a partial model (wing, canard, fuselage, "
+            "landing gear, electrical, instruments, interior + propulsion estimates). "
+            "Missing: avionics, fairings, paint, wiring harness, miscellaneous hardware. "
+            f"Community builds weigh {min(community_weights)}-{max(community_weights)} lb, "
+            f"validating the {ew_entry['value']} lb reference."
+        )
+        ew_metric["community_validation"] = {
+            "source": "reference_data.json:community_builds",
+            "sample_size": len(community_weights),
+            "weight_range_lb": [min(community_weights), max(community_weights)],
+            "weight_mean_lb": round(sum(community_weights) / len(community_weights), 1),
+            "note": (
+                f"Community build weights ({min(community_weights)}-{max(community_weights)} lb, "
+                f"n={len(community_weights)}) validate the reference empty weight of "
+                f"{ew_entry['value']} lb. Computed {round(computed_empty_weight, 1)} lb gap "
+                f"({round(ew_err_abs, 1)} lb) is due to partial weight model "
+                f"(excludes avionics, fairings, paint, wiring harness)."
+            ),
         }
-    )
+    metrics.append(ew_metric)
 
     # -------------------------------------------------------------------------
     # Airfoil metrics (from config.aero_limits, against wind tunnel reference)

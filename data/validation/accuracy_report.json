@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated": "2026-03-13T13:08:55.950100+00:00",
+    "generated": "2026-03-13T16:57:06.521127+00:00",
     "vspaero_provenance": {
       "vsp_version": "OpenVSP 3.48.2",
       "run_timestamp": "2026-03-13T11:19:43.890146+00:00",
@@ -115,7 +115,18 @@
       "error_pct": 24.705882,
       "grade": "FAIL",
       "source": "reference_data.json:aircraft_specs.empty_weight_lb",
-      "units": "pounds"
+      "units": "pounds",
+      "convention_note": "Config structural weights are a partial model (wing, canard, fuselage, landing gear, electrical, instruments, interior + propulsion estimates). Missing: avionics, fairings, paint, wiring harness, miscellaneous hardware. Community builds weigh 821-891 lb, validating the 850 lb reference.",
+      "community_validation": {
+        "source": "reference_data.json:community_builds",
+        "sample_size": 5,
+        "weight_range_lb": [
+          821,
+          891
+        ],
+        "weight_mean_lb": 855.6,
+        "note": "Community build weights (821-891 lb, n=5) validate the reference empty weight of 850 lb. Computed 640.0 lb gap (210.0 lb) is due to partial weight model (excludes avionics, fairings, paint, wiring harness)."
+      }
     },
     {
       "metric_id": "canard_clmax",
