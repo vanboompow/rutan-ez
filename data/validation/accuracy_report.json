@@ -1,0 +1,187 @@
+{
+  "metadata": {
+    "generated": "2026-03-13T13:08:55.950100+00:00",
+    "vspaero_provenance": {
+      "vsp_version": "OpenVSP 3.48.2",
+      "run_timestamp": "2026-03-13T11:19:43.890146+00:00",
+      "solver_settings": {
+        "method": "VLM",
+        "mach": 0.0,
+        "symmetry": true,
+        "alpha_range": [
+          -4.0,
+          14.0
+        ],
+        "n_points": 19
+      }
+    },
+    "traceability": "All metric sources trace to reference_data.json (external published/measured) or vspaero_native. No sources from physics_baseline.json (self-referential). Verified by validate_sources() at generation time."
+  },
+  "summary": {
+    "total": 12,
+    "pass": 9,
+    "marginal": 0,
+    "fail": 3,
+    "ungraded": 0
+  },
+  "metrics": [
+    {
+      "metric_id": "neutral_point_fs",
+      "description": "Longitudinal Neutral Point (published datum)",
+      "computed": 108.0007,
+      "reference": 108.0,
+      "tolerance_abs": 2.0,
+      "tolerance_pct": null,
+      "error_abs": 0.000738,
+      "error_pct": 0.000683,
+      "grade": "PASS",
+      "source": "reference_data.json:aircraft_specs.neutral_point_fs",
+      "units": "inches (published FS datum)"
+    },
+    {
+      "metric_id": "cg_range_fwd_fs",
+      "description": "Forward CG limit (published datum)",
+      "computed": 98.999,
+      "reference": 99.0,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "error_abs": 0.000955,
+      "error_pct": 0.000965,
+      "grade": "PASS",
+      "source": "reference_data.json:aircraft_specs.cg_range_fwd_fs",
+      "units": "inches (published FS datum)"
+    },
+    {
+      "metric_id": "cg_range_aft_fs",
+      "description": "Aft CG limit (published datum)",
+      "computed": 103.9994,
+      "reference": 104.0,
+      "tolerance_abs": 1.0,
+      "tolerance_pct": null,
+      "error_abs": 0.000596,
+      "error_pct": 0.000573,
+      "grade": "PASS",
+      "source": "reference_data.json:aircraft_specs.cg_range_aft_fs",
+      "units": "inches (published FS datum)"
+    },
+    {
+      "metric_id": "static_margin_pct",
+      "description": "Longitudinal static margin (% MAC)",
+      "computed": 1.9133,
+      "reference": 12.0,
+      "tolerance_abs": 3.0,
+      "tolerance_pct": null,
+      "error_abs": 10.086727,
+      "error_pct": 84.056057,
+      "grade": "FAIL",
+      "source": "reference_data.json:aircraft_specs.static_margin_pct",
+      "units": "percent MAC"
+    },
+    {
+      "metric_id": "stall_speed_ktas",
+      "description": "Canard stall speed at gross weight (first-principles, published areas)",
+      "computed": 53.2867,
+      "reference": 56,
+      "tolerance_abs": 5.0,
+      "tolerance_pct": null,
+      "error_abs": 2.713303,
+      "error_pct": 4.845184,
+      "grade": "PASS",
+      "source": "reference_data.json:aircraft_specs.stall_speed_ktas",
+      "units": "knots TAS",
+      "convention_note": "Uses published reference areas: wing=94.2 sqft + canard=15.6 sqft = 109.8 sqft. CLmax=1.35 (canard stalls first)."
+    },
+    {
+      "metric_id": "max_gross_weight_lb",
+      "description": "Maximum gross weight (FAA-approved, hard limit)",
+      "computed": 1425.0,
+      "reference": 1425,
+      "tolerance_abs": 0.0,
+      "tolerance_pct": null,
+      "error_abs": 0.0,
+      "error_pct": 0.0,
+      "grade": "PASS",
+      "source": "reference_data.json:aircraft_specs.max_gross_weight_lb",
+      "units": "pounds"
+    },
+    {
+      "metric_id": "empty_weight_lb",
+      "description": "Estimated empty weight (structural + propulsion components)",
+      "computed": 640.0,
+      "reference": 850,
+      "tolerance_abs": 35.0,
+      "tolerance_pct": null,
+      "error_abs": 210.0,
+      "error_pct": 24.705882,
+      "grade": "FAIL",
+      "source": "reference_data.json:aircraft_specs.empty_weight_lb",
+      "units": "pounds"
+    },
+    {
+      "metric_id": "canard_clmax",
+      "description": "Canard (Roncz R1145MS) maximum lift coefficient",
+      "computed": 1.35,
+      "reference": 1.35,
+      "tolerance_abs": 0.05,
+      "tolerance_pct": null,
+      "error_abs": 0.0,
+      "error_pct": 0.0,
+      "grade": "PASS",
+      "source": "reference_data.json:airfoil_data.roncz_r1145ms.cl_max",
+      "units": "dimensionless"
+    },
+    {
+      "metric_id": "wing_clmax",
+      "description": "Main wing (Eppler 1230) maximum lift coefficient",
+      "computed": 1.45,
+      "reference": 1.45,
+      "tolerance_abs": 0.05,
+      "tolerance_pct": null,
+      "error_abs": 0.0,
+      "error_pct": 0.0,
+      "grade": "PASS",
+      "source": "reference_data.json:airfoil_data.eppler_1230.cl_max",
+      "units": "dimensionless"
+    },
+    {
+      "metric_id": "canard_alpha_0l_deg",
+      "description": "Canard (Roncz R1145MS) zero-lift angle of attack",
+      "computed": -3.0,
+      "reference": -3.0,
+      "tolerance_abs": 0.5,
+      "tolerance_pct": null,
+      "error_abs": 0.0,
+      "error_pct": 0.0,
+      "grade": "PASS",
+      "source": "reference_data.json:airfoil_data.roncz_r1145ms.alpha_zero_lift_deg",
+      "units": "degrees"
+    },
+    {
+      "metric_id": "wing_alpha_0l_deg",
+      "description": "Main wing (Eppler 1230) zero-lift angle of attack",
+      "computed": -2.0,
+      "reference": -2.0,
+      "tolerance_abs": 0.5,
+      "tolerance_pct": null,
+      "error_abs": 0.0,
+      "error_pct": 0.0,
+      "grade": "PASS",
+      "source": "reference_data.json:airfoil_data.eppler_1230.alpha_zero_lift_deg",
+      "units": "degrees"
+    },
+    {
+      "metric_id": "wing_area_sqft",
+      "description": "Main wing planform area",
+      "computed": 110.0,
+      "reference": 94.2,
+      "tolerance_abs": 2.0,
+      "tolerance_pct": null,
+      "error_abs": 15.8,
+      "error_pct": 16.772824,
+      "grade": "FAIL",
+      "source": "reference_data.json:aircraft_specs.wing_area_sqft",
+      "units": "square feet",
+      "convention_note": "Code computes full trapezoidal planform area (~110 sqft). Published reference uses RAF semi-panel convention (94.2 sqft). FAIL grade expected \u2014 convention difference, not a physics error. See reference_data.json notes for full explanation."
+    }
+  ]
+}

@@ -323,6 +323,11 @@ def main():
     parser.add_argument(
         "--summary", action="store_true", help="Show configuration summary"
     )
+    parser.add_argument(
+        "--accuracy-report",
+        action="store_true",
+        help="Generate accuracy report to data/validation/accuracy_report.json",
+    )
 
     args = parser.parse_args()
 
@@ -334,6 +339,13 @@ def main():
 
     if args.summary:
         print(config.summary())
+        return 0
+
+    if args.accuracy_report:
+        from scripts.generate_accuracy_report import generate_accuracy_report
+
+        report_path = generate_accuracy_report()
+        print(f"  Accuracy report written to: {report_path}")
         return 0
 
     if args.validate:
