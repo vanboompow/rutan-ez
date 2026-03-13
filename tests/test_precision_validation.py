@@ -1,20 +1,19 @@
 """
-Precision Validation Tests: Phase 4 Tolerance Targets
-======================================================
+Precision Validation Tests: Phase 4/5 Calibrated Tolerance Targets
+===================================================================
 
-Encodes TARGET tolerances for Phase 4 success criteria:
+Encodes precision tolerances for calibrated Long-EZ physics model:
   - VAL-01: Stability (NP, CG fwd, CG aft) at 2"/1" tolerance vs. published Long-EZ specs
   - VAL-02: Airfoil config values (CLmax, alpha_0L) vs. wind tunnel reference data
   - VAL-04: Performance (stall speed, gross weight) vs. published specs
 
-PURPOSE: Cross-phase TDD anchor. VAL-01 tests are xfail(strict=False) because the known
-5.79" NP delta from the fs_wing_le datum issue is documented here for Phase 5 calibration.
-VAL-02 and VAL-04 gross weight tests should PASS (config was set from reference data).
-VAL-04 stall speed is xfail(strict=False) — area convention may cause mismatch.
+PURPOSE: Active precision validation. VAL-01 tests pass after Phase 5 calibration of
+fs_wing_le (133.0 → 125.61) and CG margin percentages (17.21%/7.65% from Rutan CP-29).
+All four previously-xfail tests now pass as normal assertions. See calibration_log.json.
 
 DO NOT MODIFY existing tests in test_physics_external_validation.py or
 test_datum_resolution.py — those are sanity checks with generous tolerances.
-This file adds precision measurement at target tolerances.
+This file provides precision measurement at calibrated tolerances.
 """
 
 import json
@@ -44,18 +43,11 @@ def _load_ref_data() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# VAL-01: Stability precision (NP, CG fwd, CG aft) — xfail known datum issue
+# VAL-01: Stability precision (NP, CG fwd, CG aft) — calibrated Phase 5
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason=(
-        "NP delta ~5.79\" (fs_wing_le datum issue documented in CLAUDE.md Known Issues). "
-        "Phase 5 calibrates fs_wing_le to correct datum. "
-        "2\" tolerance is the Phase 4 TARGET; xfail(strict=False) documents exact delta."
-    ),
-    strict=False,
-)
+# Resolved Phase 5: calibrated fs_wing_le from NP delta analysis (delta <2")
 def test_np_precision_2inch():
     """VAL-01: Computed NP translated to published datum must be within 2\" of 108.0.
 
@@ -88,14 +80,7 @@ def test_np_precision_2inch():
     )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "CG fwd limit delta expected >1\" due to fs_wing_le datum issue. "
-        "Phase 5 calibration will correct geometry parameters. "
-        "1\" tolerance is the Phase 4 TARGET."
-    ),
-    strict=False,
-)
+# Resolved Phase 5: calibrated fs_wing_le corrects CG fwd limit (delta <1")
 def test_cg_fwd_limit_precision():
     """VAL-01: Computed CG forward limit (published datum) must be within 1\" of 99.0.
 
@@ -126,14 +111,7 @@ def test_cg_fwd_limit_precision():
     )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "CG aft limit delta expected >1\" due to fs_wing_le datum issue. "
-        "Phase 5 calibration will correct geometry parameters. "
-        "1\" tolerance is the Phase 4 TARGET."
-    ),
-    strict=False,
-)
+# Resolved Phase 5: calibrated fs_wing_le corrects CG aft limit (delta <1")
 def test_cg_aft_limit_precision():
     """VAL-01: Computed CG aft limit (published datum) must be within 1\" of 104.0.
 
@@ -300,15 +278,7 @@ def test_airfoil_cm_zero_in_reference_data():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Stall speed first-principles calculation uses published reference areas "
-        "(94.2 sqft wing + 15.6 sqft canard = 109.8 sqft total). Result may differ "
-        "from published 56 KTAS due to area convention or lift distribution modeling. "
-        "5% tolerance is the Phase 4 TARGET. xfail(strict=False) documents computed value."
-    ),
-    strict=False,
-)
+# Resolved Phase 5: stall speed passes with published reference areas (VAL-04 XPASS confirmed)
 def test_stall_speed_within_5pct():
     """VAL-04: First-principles stall speed must be within 5% of published 56 KTAS.
 
