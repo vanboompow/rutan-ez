@@ -1,0 +1,633 @@
+# AeroForge Kernel Catalog — Gudmundsson Methods
+# Source: "General Aviation Aircraft Design: Applied Methods and Procedures"
+#         by Snorri Gudmundsson (former Cirrus SR20/SR22/SF50 Chief Aerodynamicist)
+# Methods derived from standard aerospace engineering principles
+# Primary sources cited where applicable
+#
+# Key value: GA-specific methods from an engineer who actually designed
+# certified GA aircraft (Cirrus). More granular than Raymer for low-speed props.
+
+kernels:
+
+  # ============================================================
+  # P1: GA-SPECIFIC DRAG METHODS (Gudmundsson Ch. 15)
+  # More detailed than Raymer for GA prop aircraft
+  # ============================================================
+
+  - name: ga_drag_buildup_detailed
+    domain: aero
+    priority: P1
+    description: >
+      GA-specific component drag buildup with detailed treatment of items
+      Raymer groups as "miscellaneous" — wheel fairings, antennas, rivets,
+      exhaust stacks, pitot tubes, fuel vents, and control surface gaps.
+      Critical for accurate drag prediction on small GA aircraft where
+      these items represent 10-20% of total drag.
+    method: >
+      CD_total = CD_wing + CD_fuselage + CD_empennage + CD_nacelle +
+                 CD_landing_gear + CD_interference + CD_cooling +
+                 CD_trim + CD_misc_items
+      Each component uses Cf*FF*Q*Swet/Sref as in Raymer, but with
+      GA-specific form factors and detailed miscellaneous item catalog.
+      Cooling drag: CD_cool = q_cool * Scowl / (q * Sref) for air-cooled engines.
+      Trim drag: CD_trim = delta_CL_trim^2 / (pi*e*AR) from trimming surfaces.
+    primary_sources:
+      - "Hoerner, S.F. — Fluid Dynamic Drag (1965)"
+      - "NACA TR-824 — drag data for airfoil sections"
+      - "Cirrus SR22 drag analysis (Gudmundsson industry experience)"
+    inputs:
+      components: "list of {type, geometry, surface_quality} per component"
+      sref_sqft: "Wing reference area (sq ft)"
+      altitude_ft: "Operating altitude (ft)"
+      airspeed_ktas: "True airspeed (KTAS)"
+      surface_quality: "smooth_composite | riveted_metal | fabric"
+      cooling_config: "air_cooled_tractor | air_cooled_pusher | liquid_cooled"
+      trim_cl_increment: "CL change from trim surfaces"
+    outputs:
+      cd0_total: "Total parasite drag coefficient"
+      cd_breakdown: "Per-item drag contributions with percentages"
+      cd_cooling: "Cooling drag coefficient"
+      cd_trim: "Trim drag coefficient"
+      equivalent_flat_plate_area_sqft: "f = CD0 * Sref — useful for comparing aircraft"
+    assumptions:
+      - "Subsonic flow (M < 0.5)"
+      - "Steady level flight"
+    valid_range:
+      airspeed_ktas: [40, 300]
+      altitude_ft: [0, 25000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: miscellaneous_drag_items
+    domain: aero
+    priority: P1
+    description: >
+      Catalog of drag increments for small items commonly found on GA aircraft.
+      These are often ignored in preliminary design but can represent 15-25%
+      of total drag on clean GA aircraft.
+    method: >
+      Each item has an equivalent flat plate area (f, sq ft) that depends
+      on item geometry and Reynolds number. Total misc drag = sum(fi)/Sref.
+      Typical values for GA aircraft:
+        Fixed gear (per strut+wheel): f = 0.15-0.40 sqft
+        Wheel fairing (well-shaped): f = 0.02-0.05 sqft
+        Antenna (blade type): f = 0.001-0.005 sqft
+        Pitot tube: f = 0.0005-0.002 sqft
+        Steps/handholds: f = 0.005-0.02 sqft per item
+        Rivet heads (per sqft): delta_CD = 0.0001-0.0003
+        Gap seals (control surfaces): f = 0.001-0.01 sqft per gap
+        Exhaust stack: f = 0.005-0.02 sqft
+        OAT probe: f = 0.001 sqft
+        Fuel vent: f = 0.0005 sqft
+    primary_sources:
+      - "Hoerner — Fluid Dynamic Drag, Ch. 5-8"
+      - "NACA TN-2677 — drag of fuselage appendages"
+    inputs:
+      items: "list of {type, count, size, fairing_quality}"
+    outputs:
+      total_flat_plate_area_sqft: "Sum of equivalent flat plate areas"
+      cd_misc: "CD_misc = f_total / Sref"
+      item_breakdown: "Per-item drag contributions"
+    valid_range: {}
+    configurations: [conventional, canard, twin-boom]
+
+  # ============================================================
+  # P1: PROPELLER ANALYSIS (Gudmundsson Ch. 9)
+  # Critical for prop-driven GA and RC aircraft
+  # ============================================================
+
+  - name: propeller_performance
+    domain: propulsion
+    priority: P1
+    description: >
+      Propeller performance analysis using advance ratio method.
+      Computes thrust, power absorbed, and efficiency as functions
+      of flight speed and RPM.
+    method: >
+      Advance ratio: J = V / (n * D) where n = rev/sec, D = diameter.
+      Thrust coefficient: CT = T / (rho * n^2 * D^4)
+      Power coefficient: CP = P / (rho * n^3 * D^5)
+      Efficiency: eta = J * CT / CP = T*V / P
+      For fixed-pitch props: CT and CP are functions of J only (from prop charts).
+      For constant-speed: blade angle adjusts to maintain target RPM.
+    primary_sources:
+      - "McCormick, B.W. — Aerodynamics, Aeronautics, and Flight Mechanics"
+      - "NACA TR-640 — propeller charts for Clark-Y section"
+      - "Hamilton Standard method for propeller performance"
+    inputs:
+      diameter_ft: "Propeller diameter (ft)"
+      airspeed_fps: "True airspeed (ft/s)"
+      rpm: "Propeller RPM"
+      altitude_ft: "Altitude (ft MSL)"
+      power_available_hp: "Shaft power from engine (HP)"
+      prop_type: "fixed_pitch | constant_speed"
+      num_blades: "Number of blades (2, 3, or 4)"
+      activity_factor: "Blade activity factor (80-200 typical)"
+      design_cl: "Blade design lift coefficient (0.3-0.7)"
+    outputs:
+      advance_ratio: "J — dimensionless"
+      thrust_lb: "Propeller thrust (lb)"
+      efficiency: "Propeller efficiency (dimensionless)"
+      ct: "Thrust coefficient"
+      cp: "Power coefficient"
+    assumptions:
+      - "Uniform inflow (no fuselage blockage correction)"
+      - "No compressibility effects on blade tips"
+    valid_range:
+      advance_ratio: [0.0, 3.0]
+      efficiency: [0.0, 0.92]
+      diameter_ft: [2, 10]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: static_thrust
+    domain: propulsion
+    priority: P1
+    description: >
+      Static thrust (V=0) for propeller — critical for takeoff analysis
+      and RC aircraft sizing where takeoff is a large fraction of the mission.
+    method: >
+      T_static = (P^2 * 2*rho*A_disk * eta_static^2)^(1/3)
+      Simplified: T_static ≈ 0.85 * P^(2/3) * (2*rho*A)^(1/3) for 2-blade fixed pitch
+      where A_disk = pi*D^2/4, eta_static ≈ 0.50-0.65 for fixed pitch.
+      Constant speed props: eta_static ≈ 0.60-0.75.
+    primary_sources:
+      - "Momentum theory — Rankine-Froude actuator disk"
+      - "McCormick — propeller statics"
+    inputs:
+      power_hp: "Shaft power at takeoff RPM (HP)"
+      prop_diameter_ft: "Propeller diameter (ft)"
+      altitude_ft: "Airport altitude (ft)"
+      prop_type: "fixed_pitch | constant_speed"
+    outputs:
+      static_thrust_lb: "Static thrust at V=0 (lb)"
+      disk_loading_psf: "T/A — thrust per unit disk area (lb/sqft)"
+    valid_range:
+      power_hp: [5, 500]
+      prop_diameter_ft: [0.5, 10]
+    configurations: [conventional, canard, twin-boom]
+
+  # ============================================================
+  # P1: STABILITY & CONTROL (Gudmundsson Ch. 14)
+  # GA-specific stability derivatives
+  # ============================================================
+
+  - name: longitudinal_stability_derivatives
+    domain: stability
+    priority: P1
+    description: >
+      Compute key longitudinal stability derivatives for GA aircraft.
+      More detailed treatment of GA-specific effects than Raymer.
+    method: >
+      Cm_alpha = a_w * (x_cg - x_ac_w)/MAC - eta_h * a_h * Vh * (1 - d_eps/d_alpha)
+      For canard: Cm_alpha = a_w*(x_cg - x_ac_w)/MAC + eta_c*a_c*Vc*(1 - d_eps_c/d_alpha)
+      (sign reversal because canard is ahead of CG)
+
+      Cm_delta_e = -eta_h * a_h * Vh * tau_e (elevator effectiveness)
+      where tau_e = d_CL/d_delta from thin airfoil theory or empirical data.
+
+      Cm_q = -2 * eta_h * a_h * Vh * (l_h/MAC) (pitch damping)
+    primary_sources:
+      - "Etkin & Reid — Dynamics of Flight: Stability and Control"
+      - "Phillips, W.F. — Mechanics of Flight, Ch. 9"
+      - "USAF DATCOM — stability derivative estimation methods"
+    inputs:
+      wing_cl_alpha: "Wing lift curve slope (per rad)"
+      tail_cl_alpha: "Tail/canard lift curve slope (per rad)"
+      tail_volume_coeff: "Tail or canard volume coefficient"
+      tail_efficiency: "Dynamic pressure ratio at tail"
+      downwash_gradient: "d(epsilon)/d(alpha)"
+      cg_location_mac_frac: "CG as fraction of MAC"
+      ac_location_mac_frac: "AC as fraction of MAC"
+      elevator_effectiveness: "tau_e — elevator lift effectiveness"
+      tail_moment_arm_mac: "Tail arm / MAC ratio"
+    outputs:
+      cm_alpha: "Pitch stiffness (per rad) — must be negative for stability"
+      cm_delta_e: "Elevator control power (per rad)"
+      cm_q: "Pitch damping derivative (per rad)"
+      is_statically_stable: "True if Cm_alpha < 0"
+    valid_range:
+      cm_alpha: [-3.0, 0.5]
+    configurations: [conventional, canard]
+
+  - name: lateral_directional_derivatives
+    domain: stability
+    priority: P1
+    description: >
+      Key lateral-directional stability derivatives for GA aircraft.
+      Determines dutch roll, spiral, and roll mode characteristics.
+    method: >
+      Cn_beta = Cn_beta_wing + Cn_beta_fuselage + Cn_beta_vertical_tail
+        Wing: Cn_beta_w ≈ CL^2 * (1/(4*pi*AR) - tan(sweep)/(pi*AR*(AR+4*cos(sweep))))
+        Fuselage: Cn_beta_fus ≈ -1.3 * (Vol_fus / (Sref*b)) * (d_fus/b)
+        Vertical tail: Cn_beta_vt = a_vt * eta_vt * (Svt/Sref) * (l_vt/b)
+
+      Cl_beta = Cl_beta_wing + Cl_beta_dihedral + Cl_beta_sweep
+        Dihedral: Cl_beta_dihedral ≈ -CL * (dihedral_rad/4) * (1 + 2*lambda)/(1+lambda)
+        Sweep: Cl_beta_sweep ≈ -CL * tan(sweep) * (AR + 4*cos(sweep)) / (AR + 4)
+    primary_sources:
+      - "USAF DATCOM — lateral-directional stability estimation"
+      - "Etkin & Reid — Dynamics of Flight, Ch. 5"
+      - "Perkins & Hage — Airplane Performance, Stability, and Control"
+    inputs:
+      cl_cruise: "Cruise lift coefficient"
+      wing_aspect_ratio: "Wing AR"
+      wing_sweep_rad: "Wing quarter-chord sweep (rad)"
+      wing_dihedral_rad: "Wing dihedral angle (rad)"
+      wing_taper_ratio: "Wing taper ratio"
+      fuselage_volume_cuft: "Fuselage volume (cu ft)"
+      fuselage_diameter_ft: "Max fuselage diameter (ft)"
+      vt_cl_alpha: "Vertical tail lift curve slope"
+      vt_area_sqft: "Vertical tail area (sq ft)"
+      vt_moment_arm_ft: "VT AC to CG distance (ft)"
+      vt_efficiency: "VT dynamic pressure ratio"
+      sref_sqft: "Wing reference area"
+      span_ft: "Wing span"
+    outputs:
+      cn_beta: "Yaw stiffness (per rad) — must be positive for stability"
+      cl_beta: "Dihedral effect (per rad) — typically negative"
+      cn_beta_breakdown: "Per-component yaw stiffness contributions"
+      is_directionally_stable: "True if Cn_beta > 0"
+    valid_range:
+      cn_beta: [-0.1, 0.5]
+      cl_beta: [-0.3, 0.1]
+    configurations: [conventional, canard, twin-boom]
+
+  # ============================================================
+  # P1: CONSTRAINT ANALYSIS (Gudmundsson Ch. 3)
+  # T/W vs W/S constraint diagram — the "money plot"
+  # ============================================================
+
+  - name: constraint_analysis
+    domain: sizing
+    priority: P1
+    description: >
+      Generate the T/W vs W/S constraint diagram — the most important
+      single plot in conceptual aircraft design. Each performance
+      requirement (takeoff, climb, cruise, stall, landing) defines a
+      boundary in T/W-W/S space. The design point must satisfy all
+      constraints simultaneously.
+    method: >
+      Takeoff constraint: T/W = 1.21 / (rho * CLmax_TO * Sg) * (W/S)
+      Climb constraint: T/W = ROC/V + q*CD0/(W/S) + (W/S)/(q*pi*e*AR)
+      Cruise constraint: T/W = q*CD0/(W/S) + (W/S)/(q*pi*e*AR)
+      Stall constraint: W/S = 0.5*rho*Vs^2*CLmax (vertical line)
+      Landing constraint: W/S = 0.5*rho*Vapp^2*CLmax_land / 1.69 (vertical line)
+      Ceiling constraint: T/W = 1/(L/D)_max + ROC_service/(V_best_ROC)
+
+      The feasible design space is the region satisfying all constraints.
+      Optimal design point minimizes T/W at the constraint intersection.
+    primary_sources:
+      - "Mattingly, J.D. — Aircraft Engine Design (constraint analysis chapter)"
+      - "Standard conceptual design methodology"
+    inputs:
+      takeoff_ground_roll_ft: "Required takeoff ground roll (ft)"
+      clmax_takeoff: "CLmax with takeoff flaps"
+      clmax_landing: "CLmax with landing flaps"
+      clmax_clean: "CLmax clean configuration"
+      rate_of_climb_fpm: "Required ROC (ft/min)"
+      cruise_speed_ktas: "Required cruise speed (KTAS)"
+      cruise_altitude_ft: "Cruise altitude (ft)"
+      stall_speed_kcas: "Required stall speed (KCAS)"
+      landing_distance_ft: "Available landing distance (ft)"
+      cd0: "Estimated parasite drag coefficient"
+      oswald_e: "Oswald span efficiency factor"
+      aspect_ratio: "Wing aspect ratio"
+      service_ceiling_ft: "Service ceiling requirement (ft)"
+    outputs:
+      constraint_boundaries: "dict of {requirement: [(W/S, T/W), ...]} curves"
+      feasible_region: "polygon vertices of feasible T/W-W/S space"
+      optimal_design_point: "{w_s_psf, t_w} at minimum T/W in feasible region"
+      active_constraints: "list of constraints that bound the optimal point"
+    valid_range:
+      w_s_psf: [5, 100]
+      t_w: [0.02, 0.5]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P2: LANDING GEAR (Gudmundsson Ch. 8)
+  # ============================================================
+
+  - name: landing_gear_layout
+    domain: sizing
+    priority: P2
+    description: >
+      Determine landing gear geometry — wheel positions, strut lengths,
+      tipover/turnover criteria, and ground clearance. For tricycle and
+      taildragger configurations.
+    method: >
+      Tricycle nose gear:
+        Turnover angle: psi = atan(H_cg / sqrt(B^2 + N^2))
+        Must satisfy psi < 55 degrees (63 degrees absolute max).
+        Nose load: Fn/W = (d_main - d_cg) / wheelbase * 100%
+        Typically 8-15% on nose wheel for GA.
+        Main gear position: 15 degrees aft of CG (ensures rotation).
+
+      Taildragger:
+        Main gear ahead of CG by 15-25 degrees.
+        Tail wheel load: 5-10% of gross weight.
+        Ground loop tendency analysis.
+    primary_sources:
+      - "Currey, N.S. — Aircraft Landing Gear Design (1988)"
+      - "14 CFR 23.2145 — landing gear type certification"
+    inputs:
+      cg_location_fs: "CG fuselage station (inches)"
+      cg_height_in: "CG height above ground (inches)"
+      gross_weight_lb: "Takeoff gross weight"
+      gear_type: "tricycle | taildragger | tandem"
+      main_wheel_track_in: "Track between main wheels (inches)"
+      wheelbase_in: "Distance from nose to main gear (inches)"
+    outputs:
+      nose_load_fraction: "Fraction of weight on nose gear"
+      turnover_angle_deg: "Turnover angle (must be < 55 deg)"
+      tip_back_angle_deg: "Tip back angle"
+      ground_clearance_in: "Minimum prop/wing ground clearance"
+      is_stable: "Meets all stability criteria"
+    valid_range:
+      turnover_angle_deg: [20, 63]
+      nose_load_fraction: [0.05, 0.20]
+    configurations: [conventional, canard]
+
+  # ============================================================
+  # P2: PERFORMANCE — GA SPECIFIC (Gudmundsson Ch. 16-18)
+  # ============================================================
+
+  - name: ga_takeoff_analysis
+    domain: performance
+    priority: P2
+    description: >
+      Detailed takeoff performance analysis for GA aircraft including
+      ground effect, rolling friction, and screen height. More detailed
+      than the simplified Raymer method for Part 23 compliance.
+    method: >
+      Segment 1 (ground roll): numerical integration of
+        a = (g/W) * [T - D - mu*(W - L)] from V=0 to V_LOF
+      where mu = rolling friction (0.02 paved, 0.04 grass, 0.10 soft).
+      Ground effect factor: phi = (16*h/b)^2 / (1 + (16*h/b)^2)
+      CDi_ground = phi * CDi_free_air
+
+      Segment 2 (rotation): 3 seconds at V_LOF
+      Segment 3 (transition): circular arc to climb
+      Segment 4 (climb): to 50 ft screen height at V2 >= 1.2*Vs
+    primary_sources:
+      - "14 CFR 23.2115 — takeoff performance"
+      - "McCormick — ground effect theory"
+    inputs:
+      weight_lb: "Takeoff weight (lb)"
+      wing_area_sqft: "Wing area"
+      clmax_takeoff: "CLmax with takeoff flaps"
+      cd0: "Parasite drag (clean + flap increment)"
+      thrust_curve: "Thrust vs speed curve [(V, T), ...]"
+      altitude_ft: "Airport elevation"
+      runway_surface: "paved | grass | soft"
+      wing_span_ft: "Wing span (for ground effect)"
+      oswald_e: "Oswald efficiency"
+      aspect_ratio: "Wing AR"
+    outputs:
+      ground_roll_ft: "Ground roll distance"
+      rotation_distance_ft: "Rotation segment distance"
+      transition_distance_ft: "Transition arc distance"
+      climb_to_50ft_ft: "Climb to screen height distance"
+      total_takeoff_distance_ft: "Total distance over 50ft"
+      v_lof_ktas: "Liftoff speed"
+      v_50_ktas: "Speed at 50ft"
+    valid_range:
+      total_takeoff_distance_ft: [200, 10000]
+    configurations: [conventional, canard]
+
+  - name: power_required_and_available
+    domain: performance
+    priority: P2
+    description: >
+      Generate the power required vs power available curves that determine
+      max speed, best endurance speed, and best range speed.
+    method: >
+      Power required: Pr = D * V = (CD0 * 0.5 * rho * V^3 * S) + (2*W^2)/(rho*V*S*pi*e*AR)
+      Power available: Pa = eta_p * P_engine(altitude)
+      Max speed: where Pa = Pr (high speed intersection)
+      Best endurance speed: minimum Pr (minimum drag speed / 0.76 for props)
+      Best range speed: minimum Pr/V (tangent from origin to Pr curve)
+    primary_sources:
+      - "Standard performance analysis from energy methods"
+    inputs:
+      weight_lb: "Aircraft weight"
+      wing_area_sqft: "Wing area"
+      cd0: "Parasite drag coefficient"
+      oswald_e: "Oswald efficiency"
+      aspect_ratio: "Wing AR"
+      engine_power_hp: "Engine power (HP)"
+      prop_efficiency_curve: "eta_p vs V curve"
+      altitude_ft: "Altitude"
+    outputs:
+      max_speed_ktas: "Maximum level flight speed"
+      best_endurance_speed_ktas: "Speed for minimum fuel flow"
+      best_range_speed_ktas: "Speed for maximum range"
+      power_required_curve: "[(V, Pr), ...] in HP"
+      power_available_curve: "[(V, Pa), ...] in HP"
+      excess_power_curve: "[(V, Pa-Pr), ...]"
+    valid_range:
+      max_speed_ktas: [40, 400]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P2: V-n DIAGRAM (Gudmundsson Ch. 16)
+  # ============================================================
+
+  - name: vn_diagram
+    domain: structures
+    priority: P2
+    description: >
+      Generate the V-n (velocity vs load factor) maneuvering envelope.
+      Defines structural design loads for the airframe. Required for
+      stress analysis and Part 23 compliance.
+    method: >
+      Positive maneuver boundary: n = 0.5*rho*V^2*CLmax*S/W (parabola to n_pos)
+      Negative maneuver boundary: n = 0.5*rho*V^2*CLmax_neg*S/W (to n_neg)
+      Design speeds:
+        Vs1 = sqrt(2*W/(rho*S*CLmax)) — stall speed
+        Va = Vs1 * sqrt(n_pos) — maneuvering speed
+        Vc — design cruise speed (from Part 23)
+        Vd = 1.25*Vc — design dive speed (minimum)
+        Vne = Vd / 1.1 — never exceed speed
+      Gust envelope: per 14 CFR 23.2200 (discrete gust formula)
+        n_gust = 1 + (K_g * U_de * V * a) / (2 * W/S)
+        where K_g = gust alleviation factor, U_de = derived gust velocity.
+    primary_sources:
+      - "14 CFR 23.2200 — structural design envelope"
+      - "14 CFR 23.2210 — structural design loads"
+      - "AC 23-19A — airframe guide for certification"
+    inputs:
+      gross_weight_lb: "Design gross weight"
+      wing_area_sqft: "Wing area"
+      clmax_pos: "Positive CLmax (clean)"
+      clmax_neg: "Negative CLmax"
+      n_pos_limit: "Positive limit load factor (3.8 for normal category)"
+      n_neg_limit: "Negative limit load factor (-1.52 for normal category)"
+      cruise_speed_kcas: "Design cruise speed (KCAS)"
+      altitude_ft: "Design altitude"
+      wing_loading_psf: "W/S (lb/sqft)"
+      cl_alpha_per_rad: "Wing lift curve slope"
+    outputs:
+      envelope_points: "List of (V, n) defining the envelope boundary"
+      va_kcas: "Maneuvering speed"
+      vc_kcas: "Design cruise speed"
+      vd_kcas: "Design dive speed"
+      vne_kcas: "Never exceed speed"
+      max_gust_load_factor: "Maximum gust-induced load factor"
+      critical_design_condition: "Which corner of envelope is most severe"
+    valid_range:
+      n_pos_limit: [2.5, 6.0]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P1: AIRFOIL SELECTION (Gudmundsson Ch. 7)
+  # ============================================================
+
+  - name: airfoil_selection_criteria
+    domain: aero
+    priority: P1
+    description: >
+      Evaluate and score airfoil candidates based on mission-specific
+      criteria. GA aircraft have different priorities than transport —
+      stall behavior, pitching moment, manufacturability, and surface
+      contamination sensitivity matter more than Cd at high Re.
+    method: >
+      Score each candidate airfoil on:
+        CLmax at design Re: higher is better for low W/S designs
+        Cl/Cd at cruise CL: primary efficiency metric
+        Cm0 (zero-lift moment): must be manageable for trim; reflexed < 0 preferred
+        Stall character: gradual (docile) vs sharp — docile preferred for safety
+        Sensitivity to roughness: CLmax loss with leading edge tape/bugs/rain
+        Thickness for structure: t/c must accommodate spar + fuel volume
+        Manufacturing: sharp TE vs blunt TE, curvature smoothness
+
+      Weight each criterion by mission:
+        Training: stall character (0.3), CLmax (0.2), roughness (0.2)
+        Cruise: Cl/Cd (0.4), Cm0 (0.2), CLmax (0.1)
+        Aerobatic: CLmax (0.3), negative CLmax (0.2), Cm0 (0.2)
+    primary_sources:
+      - "UIUC Airfoil Database — airfoil performance data"
+      - "NACA TR-824 — Abbott & Von Doenhoff"
+      - "Selig, M.S. — Summary of Low-Speed Airfoil Data (Vols 1-4)"
+    inputs:
+      candidates: "list of airfoil names/dat files"
+      design_reynolds: "Design Re range [Re_low, Re_high]"
+      design_cl_cruise: "Target cruise CL"
+      mission_type: "training | cruise | aerobatic | utility"
+      min_thickness_ratio: "Minimum t/c for structural requirements"
+      max_cm0: "Maximum acceptable Cm0 (for trim)"
+    outputs:
+      ranked_candidates: "Airfoils ranked by weighted score"
+      score_breakdown: "Per-criterion scores for each airfoil"
+      recommended_airfoil: "Top-ranked airfoil with rationale"
+    valid_range:
+      design_reynolds: [50000, 20000000]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P2: COMPOSITE STRUCTURES (Gudmundsson Ch. 5/12)
+  # ============================================================
+
+  - name: composite_laminate_properties
+    domain: structures
+    priority: P2
+    description: >
+      Compute equivalent elastic properties for a composite laminate
+      layup using Classical Lamination Theory (CLT). GA aircraft
+      increasingly use fiberglass and carbon fiber composites.
+    method: >
+      For each ply: compute [Q] matrix from E1, E2, G12, nu12 and orientation.
+      Transform to laminate coordinates: [Q_bar] = [T]^-1 [Q] [T]^-T
+      Assemble ABD matrix:
+        [A] = sum(Q_bar_k * (z_k - z_{k-1})) — extensional stiffness
+        [B] = 0.5 * sum(Q_bar_k * (z_k^2 - z_{k-1}^2)) — coupling
+        [D] = (1/3) * sum(Q_bar_k * (z_k^3 - z_{k-1}^3)) — bending
+      Equivalent properties: Ex = A11*(1-A12^2/(A11*A22))/t, etc.
+    primary_sources:
+      - "Jones, R.M. — Mechanics of Composite Materials"
+      - "Tsai, S.W. & Hahn, H.T. — Introduction to Composite Materials"
+      - "FAA AC 20-107B — composite aircraft structure guidance"
+    inputs:
+      layup: "list of {material, orientation_deg, thickness_mm} per ply"
+      material_properties: "dict of {E1, E2, G12, nu12, Xt, Xc, Yt, Yc, S} per material"
+    outputs:
+      abd_matrix: "6x6 ABD stiffness matrix"
+      equivalent_ex_psi: "Equivalent longitudinal modulus"
+      equivalent_ey_psi: "Equivalent transverse modulus"
+      equivalent_gxy_psi: "Equivalent shear modulus"
+      laminate_thickness_in: "Total laminate thickness"
+    valid_range: {}
+    configurations: [conventional, canard, twin-boom, flying-wing]
+    existing_implementation: "core/simulation/fea_adapter.py — partial CLT implementation"
+
+  - name: tsai_wu_failure
+    domain: structures
+    priority: P2
+    description: >
+      Tsai-Wu failure criterion for composite laminates under multiaxial
+      stress states. Determines first-ply failure and failure margin.
+    method: >
+      Tsai-Wu index: FI = F1*s1 + F2*s2 + F11*s1^2 + F22*s2^2 + F66*s6^2 + 2*F12*s1*s2
+      where:
+        F1 = 1/Xt - 1/Xc, F2 = 1/Yt - 1/Yc
+        F11 = 1/(Xt*Xc), F22 = 1/(Yt*Yc), F66 = 1/S^2
+        F12 = -0.5*sqrt(F11*F22) (conservative estimate)
+      Failure: FI >= 1.0
+      Margin of safety: MS = 1/FI - 1 (>0 means no failure)
+    primary_sources:
+      - "Tsai, S.W. & Wu, E.M. (1971) — failure criterion"
+      - "Jones — Mechanics of Composite Materials, Ch. 5"
+    inputs:
+      stress_state: "{sigma_1, sigma_2, tau_12} in ply coordinates (psi)"
+      strengths: "{Xt, Xc, Yt, Yc, S} — tensile/compressive/shear strengths (psi)"
+    outputs:
+      failure_index: "Tsai-Wu FI — failure if >= 1.0"
+      margin_of_safety: "MS = 1/FI - 1"
+      is_failed: "True if FI >= 1.0"
+      critical_mode: "tension | compression | shear | interaction"
+    valid_range:
+      failure_index: [0.0, 10.0]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+    existing_implementation: "core/simulation/fea_adapter.py — tsai_wu()"
+
+  # ============================================================
+  # P2: ELECTRIC PROPULSION (Gudmundsson 2nd Ed, Ch. 7)
+  # ============================================================
+
+  - name: electric_propulsion_sizing
+    domain: propulsion
+    priority: P2
+    description: >
+      Size electric propulsion system components — motor, battery,
+      ESC, and wiring. Added in Gudmundsson 2nd edition to address
+      the growing electric aircraft market. Critical for RC aircraft
+      where electric propulsion is standard.
+    method: >
+      Battery energy: E_batt = W_batt * e_specific (Wh)
+      where e_specific = specific energy (Wh/kg): LiPo ~150-250, LiFePO4 ~90-120
+      Motor power: P_motor = P_required / eta_motor (typically eta = 0.85-0.95)
+      Endurance: t = (E_batt * eta_total * depth_of_discharge) / P_required
+      Weight: W_system = W_batt + W_motor + W_esc + W_wiring
+      For RC: commonly sized by C-rating (max discharge rate) and cell count (voltage).
+    primary_sources:
+      - "Traub, L.W. — Range and Endurance Estimates for Battery-Powered Aircraft (AIAA)"
+      - "Hepperle, M. — Electric Flight: Potential and Limitations (DLR, 2012)"
+    inputs:
+      power_required_w: "Required power at design point (watts)"
+      endurance_required_min: "Required endurance (minutes)"
+      battery_type: "lipo | lifepo4 | lion"
+      battery_specific_energy_wh_kg: "Battery specific energy (Wh/kg)"
+      motor_efficiency: "Motor efficiency (0.85-0.95)"
+      esc_efficiency: "ESC efficiency (0.95-0.98)"
+      depth_of_discharge: "Usable battery fraction (0.80 typical for LiPo)"
+    outputs:
+      battery_weight_kg: "Required battery weight (kg)"
+      battery_capacity_wh: "Required battery capacity (Wh)"
+      motor_power_w: "Required motor power (watts)"
+      total_system_weight_kg: "Total propulsion system weight"
+      actual_endurance_min: "Achievable endurance with selected battery"
+    assumptions:
+      - "Constant power draw (hover/cruise average)"
+      - "No regeneration"
+    valid_range:
+      power_required_w: [10, 100000]
+      endurance_required_min: [1, 600]
+    configurations: [conventional, canard, twin-boom, flying-wing]

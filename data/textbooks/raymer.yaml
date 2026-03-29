@@ -1,0 +1,696 @@
+# AeroForge Kernel Catalog — Raymer Methods
+# Source: "Aircraft Design: A Conceptual Approach" by Daniel P. Raymer
+# Methods derived from standard aerospace engineering principles
+# Primary sources cited where applicable (NASA/NACA reports)
+#
+# Priority: P0 = already in Open-EZ, P1 = needed for RC POC, P2 = general GA
+
+kernels:
+
+  # ============================================================
+  # P1: INITIAL SIZING (Raymer Ch. 3/6)
+  # The core sizing loop: mission → weight fractions → TOGW
+  # ============================================================
+
+  - name: mission_segment_weight_fractions
+    domain: sizing
+    priority: P1
+    description: >
+      Estimate fuel weight consumed during each mission segment (warmup, taxi,
+      takeoff, climb, cruise, loiter, descent, landing) using historical fuel
+      fraction ratios. Cruise and loiter segments use Breguet range/endurance
+      equations; other segments use empirical ratios.
+    method: >
+      For cruise: Wi/Wi-1 = exp(-R*SFC / (V * L/D))
+      For loiter: Wi/Wi-1 = exp(-E*SFC / (L/D))
+      For other segments: empirical fractions (warmup ~0.97, taxi ~0.99,
+      takeoff ~0.97, climb ~0.985, descent ~0.99, landing ~0.995).
+      Total fuel fraction: Wf/W0 = 1.06 * (1 - product of all Wi/Wi-1)
+      where 1.06 accounts for reserves and trapped fuel.
+    primary_sources:
+      - "Breguet range equation (Louis Charles Breguet, 1920)"
+      - "NASA RP-1060 (Loftin, 1980) — historical fuel fractions"
+    inputs:
+      range_nm: "Mission range (nautical miles)"
+      endurance_hr: "Loiter endurance (hours)"
+      sfc_lbf_hr: "Specific fuel consumption (lb/lb-hr)"
+      cruise_speed_ktas: "Cruise true airspeed (knots)"
+      ld_cruise: "Lift-to-drag ratio at cruise"
+      ld_loiter: "Lift-to-drag ratio at loiter"
+    outputs:
+      fuel_fraction: "Wf/W0 — fraction of TOGW that is fuel"
+      segment_fractions: "dict of Wi/Wi-1 per segment"
+    assumptions:
+      - "Standard mission profile (warmup-taxi-takeoff-climb-cruise-loiter-descent-land)"
+      - "Constant SFC during each segment"
+      - "6% reserve/trapped fuel allowance"
+    valid_range:
+      range_nm: [0, 3000]
+      sfc_lbf_hr: [0.3, 0.8]
+      ld_cruise: [5, 25]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: empty_weight_fraction_regression
+    domain: sizing
+    priority: P1
+    description: >
+      Estimate empty weight fraction (We/W0) from gross weight using
+      statistical regression of historical aircraft data. Different regression
+      coefficients for different aircraft categories (homebuilt, GA single,
+      GA twin, etc.).
+    method: >
+      We/W0 = A * W0^C where A and C are regression coefficients.
+      Homebuilt: A=0.99, C=-0.09
+      GA single engine: A=2.36, C=-0.18
+      GA twin engine: A=1.51, C=-0.10
+      These are curve fits to historical empty weight data.
+    primary_sources:
+      - "NASA RP-1060 (Loftin, 1980) — weight regression data"
+      - "NTRS 20190000431 — comparison of weight estimation methods"
+    inputs:
+      w0_guess_lb: "Gross takeoff weight guess (lb)"
+      aircraft_category: "homebuilt | ga_single | ga_twin | agricultural | twin_turboprop"
+    outputs:
+      we_fraction: "We/W0 — empty weight fraction"
+      we_lb: "Empty weight estimate (lb)"
+    assumptions:
+      - "Statistical regression — accuracy depends on how similar the design is to historical data"
+      - "Does not account for advanced materials (composites reduce We/W0 by ~5-15%)"
+    valid_range:
+      w0_guess_lb: [500, 50000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: sizing_iteration
+    domain: sizing
+    priority: P1
+    description: >
+      The core sizing loop that converges on takeoff gross weight (W0) by
+      iterating between the weight equation W0 = Wcrew + Wpayload + Wfuel + Wempty.
+      Uses mission_segment_weight_fractions for fuel and empty_weight_fraction_regression
+      for empty weight. Converges when W0_new matches W0_guess within tolerance.
+    method: >
+      W0 = (Wcrew + Wpayload) / (1 - Wf/W0 - We/W0)
+      Iterate: guess W0 → compute We/W0 from regression → compute Wf/W0
+      from mission → compute new W0 → repeat until convergence.
+    inputs:
+      crew_weight_lb: "Total crew weight (lb)"
+      payload_weight_lb: "Payload weight (lb)"
+      range_nm: "Mission range (nm)"
+      cruise_speed_ktas: "Cruise speed (KTAS)"
+      sfc_lbf_hr: "Specific fuel consumption"
+      ld_cruise: "Cruise L/D"
+      aircraft_category: "Category for We/W0 regression"
+    outputs:
+      w0_lb: "Converged takeoff gross weight (lb)"
+      we_lb: "Empty weight (lb)"
+      wf_lb: "Fuel weight (lb)"
+      iterations: "Number of iterations to converge"
+    assumptions:
+      - "Fixed crew and payload weights"
+      - "Convergence tolerance: 0.5 lb or 0.1%"
+    valid_range:
+      w0_lb: [500, 50000]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P1: AERODYNAMICS / DRAG (Raymer Ch. 12)
+  # Component buildup method for drag estimation
+  # ============================================================
+
+  - name: wetted_area_estimation
+    domain: aero
+    priority: P1
+    description: >
+      Estimate wetted area (Swet) for each aircraft component. Swet is the
+      total surface area exposed to airflow, used in the drag buildup.
+    method: >
+      Wing/tail: Swet = 2 * Sexposed * (1 + 0.25*(t/c)_root * (1+tau*lambda)/(1+lambda))
+      where tau = (t/c)_tip / (t/c)_root, lambda = taper ratio.
+      Fuselage: Swet = pi * d * L * (1 - 2/fineness_ratio)^(2/3) * (1 + 1/fineness_ratio^2)
+      where fineness_ratio = L/d.
+    primary_sources:
+      - "Standard geometric formulas for surface revolution and planform area"
+    inputs:
+      component_type: "wing | fuselage | nacelle | tail"
+      reference_area_sqft: "Component reference area (sq ft)"
+      thickness_ratio: "t/c at root"
+      taper_ratio: "Tip chord / root chord"
+      length_ft: "Component length (ft, for fuselage)"
+      diameter_ft: "Max diameter (ft, for fuselage)"
+    outputs:
+      swet_sqft: "Wetted area (sq ft)"
+    valid_range:
+      thickness_ratio: [0.06, 0.25]
+      taper_ratio: [0.2, 1.0]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: skin_friction_coefficient
+    domain: aero
+    priority: P1
+    description: >
+      Flat plate skin friction coefficient as a function of Reynolds number
+      for turbulent or laminar boundary layers.
+    method: >
+      Laminar: Cf = 1.328 / sqrt(Re)  (Blasius solution)
+      Turbulent: Cf = 0.455 / (log10(Re))^2.58  (Schlichting)
+      With compressibility: Cf_comp = Cf / (1 + 0.144*M^2)^0.65
+    primary_sources:
+      - "Blasius, H. (1908) — laminar boundary layer solution"
+      - "Schlichting, H. — Boundary Layer Theory"
+      - "NACA TR-1135 — compressibility corrections"
+    inputs:
+      reynolds_number: "Component Reynolds number"
+      mach_number: "Freestream Mach number"
+      flow_type: "laminar | turbulent | mixed"
+      x_transition: "Transition location as fraction of chord (for mixed)"
+    outputs:
+      cf: "Skin friction coefficient (dimensionless)"
+    valid_range:
+      reynolds_number: [10000, 500000000]
+      mach_number: [0.0, 0.85]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: component_form_factor
+    domain: aero
+    priority: P1
+    description: >
+      Form factor (FF) accounts for pressure drag due to component shape.
+      Multiplied by Cf to get component drag coefficient.
+    method: >
+      Wing/tail: FF = (1 + 0.6/(x/c)_max * (t/c) + 100*(t/c)^4) *
+                      (1.34 * M^0.18 * cos(sweep_max_t)^0.28)
+      Fuselage: FF = 1 + 60/f^3 + f/400
+      where f = L/d (fineness ratio), (x/c)_max = chordwise location of max thickness.
+    primary_sources:
+      - "Hoerner, S.F. — Fluid Dynamic Drag (1965)"
+      - "NASA wind tunnel correlations"
+    inputs:
+      component_type: "wing | fuselage | nacelle | tail | strut"
+      thickness_ratio: "t/c (for lifting surfaces)"
+      max_thickness_location: "(x/c)_max — chordwise position of max thickness"
+      fineness_ratio: "L/d (for bodies)"
+      mach_number: "Freestream Mach"
+      sweep_max_thickness_rad: "Sweep at max thickness line (rad)"
+    outputs:
+      form_factor: "FF — dimensionless form factor"
+    valid_range:
+      thickness_ratio: [0.04, 0.25]
+      fineness_ratio: [3, 15]
+      mach_number: [0.0, 0.85]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: interference_factor
+    domain: aero
+    priority: P1
+    description: >
+      Interference factor (Q) accounts for aerodynamic interference between
+      components (e.g., wing-fuselage junction drag).
+    method: >
+      Typical values from wind tunnel correlations:
+      Wing-fuselage (well-filleted): Q = 1.0
+      Wing-fuselage (no fillet): Q = 1.1-1.4
+      Nacelle-wing: Q = 1.3-1.5
+      Tail surfaces: Q = 1.03-1.05
+      Struts: Q = 1.0
+    primary_sources:
+      - "Hoerner, S.F. — Fluid Dynamic Drag (1965)"
+    inputs:
+      component_type: "wing | tail | nacelle | strut | canard"
+      junction_quality: "well_filleted | unfilleted | podded"
+    outputs:
+      interference_factor: "Q — dimensionless"
+    valid_range: {}
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: drag_buildup
+    domain: aero
+    priority: P1
+    description: >
+      Component buildup method for total aircraft drag. Sums parasite drag
+      from all components plus miscellaneous and leakage/protuberance drag.
+      Composes: skin_friction_coefficient, component_form_factor,
+      interference_factor, wetted_area_estimation.
+    method: >
+      CD0 = (1/Sref) * sum_components(Cfi * FFi * Qi * Swet_i) + CDmisc + CDL&P
+      where CDmisc = landing gear + antennae + flap tracks + etc.
+      CDL&P = leakage and protuberance drag (typically 2-5% of CD0 for clean aircraft).
+      Total drag: CD = CD0 + CL^2/(pi*e*AR) where e = Oswald efficiency.
+    primary_sources:
+      - "Component buildup method — standard textbook approach"
+      - "Hoerner (1965), Schlichting boundary layer theory"
+    inputs:
+      components: "list of {type, swet, cf, ff, q} per component"
+      sref_sqft: "Wing reference area (sq ft)"
+      cd_misc: "Miscellaneous drag coefficient"
+      cd_lp_fraction: "Leakage/protuberance as fraction of CD0 (typically 0.02-0.05)"
+    outputs:
+      cd0: "Parasite drag coefficient"
+      cd_total: "Total drag at given CL"
+      drag_breakdown: "Per-component drag contributions"
+    valid_range:
+      cd0: [0.01, 0.10]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P1: WEIGHT ESTIMATION (Raymer Ch. 15)
+  # Statistical group weight methods
+  # ============================================================
+
+  - name: wing_weight_statistical
+    domain: weight
+    priority: P1
+    description: >
+      Statistical estimation of wing structural weight based on geometric
+      and load parameters.
+    method: >
+      Wwing = 0.036 * Sw^0.758 * Wfw^0.0035 * (AR/cos^2(sweep))^0.6 *
+              q^0.006 * lambda^0.04 * (100*t/c/cos(sweep))^(-0.3) *
+              (Nz*Wdg)^0.49
+      where Sw=wing area, Wfw=fuel weight in wing, AR=aspect ratio,
+      sweep=quarter-chord sweep, q=dynamic pressure, lambda=taper ratio,
+      t/c=thickness ratio, Nz=ultimate load factor, Wdg=design gross weight.
+    primary_sources:
+      - "Nicolai, L.M. weight estimation methodology"
+      - "NTRS 19960025262 — analytical fuselage and wing weight"
+      - "SAWE Paper 2228 — statistical weight methods"
+    inputs:
+      wing_area_sqft: "Trapezoidal wing area (sq ft)"
+      fuel_weight_wing_lb: "Weight of fuel stored in wing (lb)"
+      aspect_ratio: "Wing aspect ratio"
+      quarter_chord_sweep_rad: "Quarter-chord sweep angle (rad)"
+      dynamic_pressure_psf: "Design cruise dynamic pressure (lb/sq ft)"
+      taper_ratio: "Wing taper ratio"
+      thickness_ratio: "Wing t/c at root"
+      ultimate_load_factor: "Ultimate load factor (typically 1.5 * limit)"
+      design_gross_weight_lb: "Design gross weight (lb)"
+    outputs:
+      wing_weight_lb: "Estimated wing weight (lb)"
+    assumptions:
+      - "Metal construction — apply 0.85 factor for composites"
+      - "Conventional spar/rib construction"
+    valid_range:
+      wing_area_sqft: [50, 500]
+      aspect_ratio: [4, 14]
+      design_gross_weight_lb: [1000, 50000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: fuselage_weight_statistical
+    domain: weight
+    priority: P1
+    description: >
+      Statistical estimation of fuselage structural weight.
+    method: >
+      Wfuselage = 0.052 * Sf^1.086 * (Nz*Wdg)^0.177 * Lt^(-0.051) *
+                  (L/D)^(-0.072) * q^0.241 + Wpress
+      where Sf=fuselage wetted area, Lt=tail length (distance from wing
+      MAC/4 to tail MAC/4), L/D=fuselage fineness ratio,
+      Wpress=pressurization weight (0 for GA unpressurized).
+    primary_sources:
+      - "NTRS 19960025262 — analytical fuselage and wing weight"
+    inputs:
+      fuselage_wetted_area_sqft: "Fuselage wetted area (sq ft)"
+      ultimate_load_factor: "Ultimate load factor"
+      design_gross_weight_lb: "Design gross weight (lb)"
+      tail_length_ft: "Wing-to-tail distance (ft)"
+      fuselage_fineness_ratio: "Length/diameter"
+      dynamic_pressure_psf: "Design cruise q (psf)"
+      pressurized: "Is cabin pressurized"
+    outputs:
+      fuselage_weight_lb: "Estimated fuselage weight (lb)"
+    valid_range:
+      fuselage_wetted_area_sqft: [50, 1000]
+      design_gross_weight_lb: [1000, 50000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: empennage_weight_statistical
+    domain: weight
+    priority: P1
+    description: >
+      Statistical estimation of horizontal and vertical tail weight.
+      For canard configurations, the canard replaces the horizontal tail.
+    method: >
+      Wht = 0.016 * (Nz*Wdg)^0.414 * q^0.168 * Sht^0.896 *
+            (100*t/c/cos(sweep))^(-0.12) * (AR/cos^2(sweep))^0.043 * lambda^(-0.02)
+      Wvt = 0.073 * (1+0.2*Fht) * (Nz*Wdg)^0.376 * q^0.122 * Svt^0.873 *
+            (100*t/c/cos(sweep))^(-0.49) * (AR/cos^2(sweep))^0.357 * lambda^0.039
+      where Fht = 0 for conventional tail, 1 for T-tail.
+    primary_sources:
+      - "Nicolai weight methods"
+      - "Torenbeek, E. — Synthesis of Subsonic Airplane Design"
+    inputs:
+      surface_type: "horizontal | vertical | canard"
+      surface_area_sqft: "Planform area (sq ft)"
+      aspect_ratio: "Surface AR"
+      sweep_rad: "Quarter-chord sweep (rad)"
+      taper_ratio: "Taper ratio"
+      thickness_ratio: "Surface t/c"
+      ultimate_load_factor: "Ultimate load factor"
+      design_gross_weight_lb: "Design gross weight (lb)"
+      dynamic_pressure_psf: "Design cruise q (psf)"
+      t_tail: "T-tail configuration (adds Fht factor)"
+    outputs:
+      surface_weight_lb: "Estimated surface weight (lb)"
+    valid_range:
+      surface_area_sqft: [5, 200]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: landing_gear_weight
+    domain: weight
+    priority: P1
+    description: >
+      Landing gear weight estimation based on gross weight and configuration.
+    method: >
+      Main gear: Wm = 0.095 * (Nl*Wl)^0.768 * (Lm/12)^0.409
+      Nose gear: Wn = 0.125 * (Nl*Wl)^0.566 * (Ln/12)^0.845
+      where Nl=ultimate landing load factor (typically 1.5*gear_load_factor),
+      Wl=landing design gross weight, Lm/Ln=extended gear length (in).
+    primary_sources:
+      - "Currey, N.S. — Aircraft Landing Gear Design (1988)"
+    inputs:
+      landing_weight_lb: "Landing design gross weight (lb)"
+      landing_load_factor: "Landing gear load factor (typically 3.0)"
+      main_gear_length_in: "Main gear extended length (in)"
+      nose_gear_length_in: "Nose gear extended length (in)"
+    outputs:
+      main_gear_weight_lb: "Main gear weight (lb)"
+      nose_gear_weight_lb: "Nose gear weight (lb)"
+      total_gear_weight_lb: "Total landing gear weight (lb)"
+    valid_range:
+      landing_weight_lb: [500, 50000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: installed_engine_weight
+    domain: weight
+    priority: P1
+    description: >
+      Total installed propulsion system weight including engine, accessories,
+      propeller, and installation hardware.
+    method: >
+      Weng_installed = 2.575 * Weng^0.922 * Neng
+      Wprop = sum of prop assembly weights
+      Wfuel_system = 2.49 * Vt^0.726 * (1/(1+Vi/Vt))^0.363 * Nt^0.242 * Neng^0.157
+      where Weng=bare engine weight, Vt=total fuel volume, Vi=integral tank volume,
+      Nt=number of fuel tanks.
+    primary_sources:
+      - "Engine manufacturer data sheets (Lycoming, Continental)"
+    inputs:
+      bare_engine_weight_lb: "Engine dry weight (lb)"
+      num_engines: "Number of engines"
+      total_fuel_volume_gal: "Total fuel capacity (gal)"
+      num_fuel_tanks: "Number of fuel tanks"
+    outputs:
+      installed_engine_weight_lb: "Installed engine system weight (lb)"
+      fuel_system_weight_lb: "Fuel system weight (lb)"
+      propeller_weight_lb: "Propeller assembly weight (lb)"
+    valid_range:
+      bare_engine_weight_lb: [50, 1000]
+    configurations: [conventional, canard, twin-boom]
+
+  # ============================================================
+  # P1: PERFORMANCE (Raymer Ch. 17)
+  # Takeoff, climb, cruise, stall speed
+  # ============================================================
+
+  - name: stall_speed
+    domain: performance
+    priority: P1
+    description: >
+      Stall speed in level flight at a given weight and altitude.
+    method: >
+      Vs = sqrt(2*W / (rho * S * CLmax))
+      where rho = air density at altitude, S = wing reference area,
+      CLmax = maximum lift coefficient (clean or with flaps).
+    primary_sources:
+      - "Fundamental aerodynamics — derived from L = 0.5*rho*V^2*S*CL"
+    inputs:
+      weight_lb: "Aircraft weight (lb)"
+      wing_area_sqft: "Wing reference area (sq ft)"
+      cl_max: "Maximum lift coefficient"
+      altitude_ft: "Altitude (ft MSL)"
+    outputs:
+      vs_fps: "Stall speed (ft/s)"
+      vs_ktas: "Stall speed (KTAS)"
+      vs_kcas: "Stall speed (KCAS)"
+    valid_range:
+      weight_lb: [500, 50000]
+      cl_max: [0.8, 3.0]
+      altitude_ft: [0, 30000]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: takeoff_distance
+    domain: performance
+    priority: P1
+    description: >
+      Estimate takeoff ground roll and total takeoff distance over a
+      50-ft obstacle.
+    method: >
+      Ground roll: Sg = 1.21 * W^2 / (g * rho * S * CLmax * {T - [D + mu*(W-L)]_avg})
+      Simplified: Sg = (W/S) / (rho * g * CLmax * (T/W))  * correction_factor
+      Total distance (50ft obstacle): Stotal = Sg + Sa
+      where Sa = rotation + climb to 50 ft.
+    primary_sources:
+      - "FAR Part 23 takeoff performance requirements"
+      - "Anderson, Introduction to Flight — takeoff analysis"
+    inputs:
+      weight_lb: "Takeoff gross weight (lb)"
+      wing_area_sqft: "Wing area (sq ft)"
+      cl_max_takeoff: "CLmax with takeoff flaps"
+      thrust_lb: "Available thrust at takeoff (lb)"
+      altitude_ft: "Airport altitude (ft MSL)"
+      runway_surface: "paved | grass | soft"
+    outputs:
+      ground_roll_ft: "Ground roll distance (ft)"
+      total_distance_ft: "Total distance to clear 50ft obstacle (ft)"
+    valid_range:
+      weight_lb: [500, 50000]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: rate_of_climb
+    domain: performance
+    priority: P1
+    description: >
+      Rate of climb and climb angle at a given speed, altitude, and weight.
+    method: >
+      RC = (T - D) * V / W = V * (T/W - 1/(L/D))
+      Best RC speed: V_best_RC ~ sqrt(2*W/(rho*S)) * (T/(3*CD0*rho*S))^(1/4)
+      Climb angle: gamma = arcsin((T-D)/W)
+    primary_sources:
+      - "Energy methods — standard performance analysis"
+    inputs:
+      weight_lb: "Aircraft weight (lb)"
+      thrust_available_lb: "Thrust at climb speed (lb)"
+      drag_lb: "Total drag at climb speed (lb)"
+      airspeed_fps: "True airspeed (ft/s)"
+    outputs:
+      rate_of_climb_fpm: "Rate of climb (ft/min)"
+      climb_angle_deg: "Climb angle (degrees)"
+    valid_range:
+      rate_of_climb_fpm: [-5000, 10000]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  - name: cruise_range
+    domain: performance
+    priority: P1
+    description: >
+      Cruise range using Breguet range equation for propeller aircraft.
+    method: >
+      Propeller: R = (eta_p / SFC) * (L/D) * ln(Wi/Wf)
+      where eta_p = propeller efficiency, SFC = brake specific fuel consumption,
+      Wi = initial weight, Wf = final weight (fuel burned).
+    primary_sources:
+      - "Breguet, L.C. (1920) — range equation"
+    inputs:
+      prop_efficiency: "Propeller efficiency (dimensionless, 0.7-0.85 typical)"
+      bsfc_lb_hp_hr: "Brake specific fuel consumption (lb/hp-hr)"
+      ld_ratio: "Lift-to-drag ratio at cruise"
+      initial_weight_lb: "Weight at start of cruise (lb)"
+      final_weight_lb: "Weight at end of cruise (lb)"
+    outputs:
+      range_nm: "Cruise range (nautical miles)"
+      range_sm: "Cruise range (statute miles)"
+    valid_range:
+      prop_efficiency: [0.5, 0.92]
+      bsfc_lb_hp_hr: [0.35, 0.65]
+      ld_ratio: [5, 25]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+
+  # ============================================================
+  # P1: PROPULSION (Raymer Ch. 10/13)
+  # Engine selection and performance
+  # ============================================================
+
+  - name: reciprocating_engine_performance
+    domain: propulsion
+    priority: P1
+    description: >
+      Performance model for normally aspirated reciprocating engines.
+      Power decreases with altitude due to air density reduction.
+    method: >
+      P_alt = P_SL * (rho/rho_SL) — simple density ratio
+      More accurate (Gagg-Ferrar): P_alt = P_SL * (rho/rho_SL - 0.117) / 0.883
+      SFC variation: BSFC roughly constant with altitude for NA engines.
+      Typical BSFC: 0.42-0.52 lb/hp-hr for Lycoming/Continental.
+    primary_sources:
+      - "Gagg & Ferrar (1934) — altitude performance correlation"
+      - "Lycoming operator's manuals — engine performance data"
+    inputs:
+      sea_level_power_hp: "Rated sea level power (HP)"
+      altitude_ft: "Operating altitude (ft MSL)"
+      rpm_fraction: "Fraction of max RPM (0.5-1.0)"
+      engine_type: "na_carb | na_injected | turbocharged"
+    outputs:
+      power_available_hp: "Available power at altitude (HP)"
+      bsfc_lb_hp_hr: "Brake specific fuel consumption"
+      fuel_flow_gph: "Fuel flow rate (gal/hr)"
+    valid_range:
+      sea_level_power_hp: [50, 500]
+      altitude_ft: [0, 25000]
+    configurations: [conventional, canard, twin-boom]
+
+  # ============================================================
+  # P0: ALREADY IN OPEN-EZ (port to kernel schema)
+  # ============================================================
+
+  - name: lift_curve_slope_sweep_corrected
+    domain: aero
+    priority: P0
+    description: >
+      Lift curve slope corrected for sweep, aspect ratio, and Mach number
+      using the Anderson equation.
+    method: >
+      a = (2*pi*AR) / (2 + sqrt(4 + AR^2*(1 + tan^2(sweep_c/2)/beta^2)))
+      where beta^2 = 1 - M^2, sweep_c/2 = half-chord sweep.
+    primary_sources:
+      - "Anderson, J.D. — Fundamentals of Aerodynamics, Eq. 5.69"
+    inputs:
+      aspect_ratio: "Wing aspect ratio"
+      half_chord_sweep_rad: "Half-chord sweep angle (rad)"
+      mach_number: "Freestream Mach number"
+    outputs:
+      cl_alpha_per_rad: "Lift curve slope (per radian)"
+      cl_alpha_per_deg: "Lift curve slope (per degree)"
+    valid_range:
+      aspect_ratio: [3, 20]
+      mach_number: [0.0, 0.85]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+    existing_implementation: "core/analysis.py — lift_curve_slope()"
+
+  - name: reynolds_scaled_clmax
+    domain: aero
+    priority: P0
+    description: >
+      Scale maximum lift coefficient for Reynolds number effects.
+    method: >
+      CLmax_actual = CLmax_ref * (Re/Re_ref)^0.1
+    primary_sources:
+      - "Raymer, Sec. 12.5 — Reynolds number effects on CLmax"
+      - "Abbott & Von Doenhoff — NACA TR-824"
+    inputs:
+      clmax_ref: "Reference CLmax (from wind tunnel data)"
+      re_ref: "Reference Reynolds number"
+      re_actual: "Actual Reynolds number"
+    outputs:
+      clmax_actual: "Scaled CLmax"
+    valid_range:
+      re_actual: [50000, 20000000]
+    configurations: [conventional, canard, twin-boom, flying-wing]
+    existing_implementation: "core/analysis.py — stall_priority_check()"
+
+  # ============================================================
+  # P2: STABILITY & CONTROL (Raymer Ch. 16)
+  # ============================================================
+
+  - name: tail_volume_coefficient
+    domain: stability
+    priority: P2
+    description: >
+      Size horizontal and vertical tail surfaces using volume coefficient method.
+    method: >
+      Horizontal: Sht = (Cht * Sw * MAC) / Lht
+      Vertical: Svt = (Cvt * Sw * b) / Lvt
+      where Cht = horizontal tail volume coefficient (0.50-0.80 for GA),
+      Cvt = vertical tail volume coefficient (0.02-0.05 for GA),
+      Lht/Lvt = moment arm from wing AC to tail AC.
+      For canard: Cht_canard typically 0.1-0.3 (smaller due to forward position).
+    primary_sources:
+      - "Standard tail sizing methodology"
+      - "Perkins & Hage — Airplane Performance, Stability, and Control"
+    inputs:
+      surface_type: "horizontal | vertical | canard"
+      wing_area_sqft: "Wing reference area (sq ft)"
+      wing_mac_ft: "Wing mean aerodynamic chord (ft)"
+      wing_span_ft: "Wing span (ft)"
+      moment_arm_ft: "Wing AC to tail AC distance (ft)"
+      volume_coefficient: "Target volume coefficient"
+    outputs:
+      required_area_sqft: "Required tail/canard area (sq ft)"
+    valid_range:
+      volume_coefficient: [0.02, 1.0]
+    configurations: [conventional, canard, twin-boom]
+
+  - name: static_margin_and_np
+    domain: stability
+    priority: P0
+    description: >
+      Neutral point and static margin calculation for canard or conventional
+      configurations.
+    method: >
+      NP = (a_w*S_w*x_ac_w + a_c*S_c*x_ac_c*eta) / (a_w*S_w + a_c*S_c*eta)
+      SM = (NP - CG) / MAC * 100 (percent)
+      Canard efficiency: eta = 1 - d(epsilon)/d(alpha)
+    primary_sources:
+      - "Phillips, W.F. — Mechanics of Flight, Ch. 9"
+      - "Anderson — stability and control fundamentals"
+    inputs:
+      wing_area_sqft: "Wing reference area"
+      wing_cl_alpha: "Wing lift curve slope"
+      wing_ac_location: "Wing AC position (FS)"
+      canard_area_sqft: "Canard area"
+      canard_cl_alpha: "Canard lift curve slope"
+      canard_ac_location: "Canard AC position (FS)"
+      canard_efficiency: "Canard downwash efficiency factor"
+      cg_location: "CG position (FS)"
+      mac_length: "Mean aerodynamic chord length"
+    outputs:
+      neutral_point: "NP location (FS)"
+      static_margin_pct: "Static margin (% MAC)"
+      is_stable: "True if SM > 5%"
+    valid_range:
+      static_margin_pct: [-20, 40]
+    configurations: [conventional, canard]
+    existing_implementation: "core/analysis.py — neutral_point(), static_margin()"
+
+  # ============================================================
+  # P2: CONFIGURATION LAYOUT (Raymer Ch. 7-11)
+  # ============================================================
+
+  - name: wing_geometry_parameters
+    domain: sizing
+    priority: P2
+    description: >
+      Compute derived wing geometry from basic design parameters.
+    method: >
+      MAC = (2/3)*c_root*(1+lambda+lambda^2)/(1+lambda)
+      y_MAC = (b/6)*(1+2*lambda)/(1+lambda)
+      Exposed area = Sref - fuselage_width * c_root_exposed
+      Aspect ratio = b^2 / Sref
+    primary_sources:
+      - "Standard geometric relationships for trapezoidal planforms"
+    inputs:
+      span_ft: "Wing span (ft)"
+      root_chord_ft: "Root chord (ft)"
+      tip_chord_ft: "Tip chord (ft)"
+      le_sweep_rad: "Leading edge sweep (rad)"
+      dihedral_rad: "Dihedral angle (rad)"
+      fuselage_width_ft: "Fuselage width at wing root (ft)"
+    outputs:
+      wing_area_sqft: "Trapezoidal wing area"
+      mac_ft: "Mean aerodynamic chord (ft)"
+      y_mac_ft: "Spanwise location of MAC (ft from centerline)"
+      aspect_ratio: "Wing aspect ratio"
+      taper_ratio: "Tip/root chord ratio"
+      quarter_chord_sweep_rad: "Quarter-chord sweep (rad)"
+    valid_range:
+      aspect_ratio: [3, 20]
+      taper_ratio: [0.15, 1.0]
+    configurations: [conventional, canard, twin-boom, flying-wing]
