@@ -38,3 +38,6 @@ logs/
 # OS Specific
 .DS_Store
 Thumbs.db
+# Simulation artifacts
+*.vspaero
+*.tri
