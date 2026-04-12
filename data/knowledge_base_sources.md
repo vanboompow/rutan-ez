@@ -108,3 +108,18 @@ Generated 2026-03-25. Feeds kernel citations and validation data.
 |------|-------|----------|
 | Raymer 7th ed (2024) | ~$130 | AIAA |
 | Bisplinghoff "Aeroelasticity" Dover | ~$25 | Dover |
+
+## Forge Knowledge Synthesis Exports
+
+Cross-domain knowledge compiled by [Forge](~/forge) — a personal knowledge synthesis engine.
+These markdown files contain structured wiki content with cross-references, sourced from
+1,500+ ingested sources and compiled via Claude API.
+
+| File | Topics | Lines | Updated |
+|------|--------|-------|---------|
+| `forge-aviation-context.md` | Canard aerodynamics, Long-EZ design history, composite structures, flight testing, VFR operations | 1,944 | 2026-04-12 |
+| `forge-3dprinting-context.md` | FDM/resin printing for jigs and fixtures, CNC foam cutting, composite tooling, rapid prototyping | 960 | 2026-04-12 |
+| `forge-bridges.md` | Cross-domain bridge notes connecting aviation ↔ composites ↔ 3D printing ↔ manufacturing | 421 | 2026-04-12 |
+
+**Usage:** Load via `data/forge_context.py` for programmatic access, or read directly as markdown reference.
+Bridge notes are especially relevant for discovering non-obvious connections (e.g., composite layup techniques informed by 3D printing tolerances).
