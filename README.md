@@ -3,6 +3,8 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+> **Safety notice:** This project involves safety-critical aviation design. Outputs are Fabrication Aids for amateur-built aircraft, not certified engineering drawings. All geometry and aerodynamic data are in active development and have not been validated against physical hardware. Builders are solely responsible for verifying all dimensions before use in aircraft construction. Errors can result in structural failure, loss of control, or fatal accidents. The Roncz R1145MS canard airfoil is mandatory — the original GU25-5(11)8 airfoil causes dangerous lift loss in rain.
+
 ## The Project
 
 The Open-EZ PDE is a community-driven "Plans-as-Code" repository dedicated to the modernization of the Rutan Long-EZ (Model 61). We are transforming legacy 1970s aircraft plans into a living, version-controlled, and aerodynamically validated parametric design environment.
