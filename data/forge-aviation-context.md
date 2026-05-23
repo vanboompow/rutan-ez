@@ -4,87 +4,91 @@ _Domain: aviation | Pages matched by keyword_
 
 ---
 
-## 3D printed aircraft tooling jigs and molds
+## 3D Printed Aircraft Tooling Jigs And Molds
 
 # 3D Printed Aircraft Tooling, Jigs, and Molds
 
 ## Overview
 
-3D printing has transformed the production of tooling, jigs, and fixtures for aircraft manufacturing. What once required weeks of CNC machining from solid metal blocks can now be produced in days through additive manufacturing, with cost savings starting at 50% and weight reductions up to 80% [b728e305]. The technology spans from desktop FDM printers producing alignment jigs to large-format additive manufacturing (LFAM) systems creating meter-scale molds for fuselage components.
+3D printing, also known as additive manufacturing (AM), has transformed the production of tooling, jigs, and fixtures for aircraft manufacturing [608a4161]. What once required weeks of CNC machining from solid metal blocks can now be produced in days or even hours through additive processes [d2dc9592]. In the aerospace sector, this technology offers cost savings starting at 50%, weight reductions up to 80%, and significant reductions in material waste [b728e305]. The application of 3D printing in this field ranges from desktop Fused Deposition Modeling (FDM) for small alignment aids to Large-Format Additive Manufacturing (LFAM) for meter-scale structural molds [b728e305][b0f076e3].
 
-## Large-Format Additive Manufacturing for Aerospace Tooling
+## Terminology and Definitions
+
+While the terms "3D printing" and "additive manufacturing" are often used synonymously in casual conversation, industrial standards such as ISO/ASTM 52900 often distinguish AM as the formal process of building parts from 3D model data layer-by-layer, while 3D printing specifically refers to material deposition through a print head or nozzle [608a4161].
+
+In the context of manufacturing aids, a distinction is often made between jigs and fixtures:
+*   **Jigs:** These tools guide the motion of other tools, such as drill bits, and are typically used in manual operations [87204e5d].
+*   **Fixtures:** These are sturdy work-holding devices that secure a workpiece at a specific angle or position during manufacturing steps, such as assembly or inspection, but do not guide the tools themselves [87204e5d][100ddfa0].
+*   **Agile Tooling:** This refers to the use of modular or 3D-printed means to quickly respond to prototyping and fixture needs [608a4161].
+
+## Large-Format Additive Manufacturing (LFAM) for Aerospace
+
+LFAM refers to 3D printing methods engineered to create functional parts exceeding one meter in dimension [b0f076e3]. This technology is a critical enabler for aerospace companies to produce expansive structural components and robust molds [b0f076e3].
 
 ### Caracol Heron AM System
-
-Caracol's Heron AM platform produces aircraft tooling including trim and drill tools, cold lamination tools, jigs, fixtures, and master molds for composite fabrication. Their system processes composite materials with thermoplastic matrices including PP, ABS, PC, and PEI [b728e305].
-
-Key production results for a fuselage trimming and drilling tool:
-- Material: ABS + Glass Fiber
-- Size: 1650mm x 1000mm x 400mm
-- Tolerances: 0.2mm after CNC post-processing
-- Weight reduction: up to 80%
-- Lead time: reduced from 12 weeks to 5-6 weeks
-- Cost savings: starting from 50% [b728e305]
+Caracol's Heron AM platform is an integrated system qualified with AS/EN 9100 certification for manufacturing aerospace tools, jigs, and fixtures [b728e305]. The system can process a broad range of composite materials, including glass, carbon, or Kevlar fibers with thermoplastic matrices like Polypropylene (PP), ABS, Polycarbonate (PC), and PEI [b728e305]. 
+*   **Case Study:** A fuselage trimming and drilling tool printed with ABS and glass fiber achieved a 0.2 mm dimensional tolerance after CNC post-processing and reduced lead time from 12 weeks to approximately 5-6 weeks [b728e305].
 
 ### Thermwood LSAM
+Thermwood’s Large Scale Additive Manufacturing (LSAM) systems utilize a "near net shape" approach, where parts are printed slightly oversized at high speeds and then trimmed to final dimensions on the same machine [93092128]. These systems can produce solid, vacuum-tight structures suitable for autoclave use without additional coatings [93092128]. LSAM envelopes can reach sizes of 240" x 120" x 60" or larger, with some print beds extending up to 40 feet [5f8f1c29][93092128].
 
-Thermwood's LSAM systems use a "near net shape" approach -- printing slightly oversized parts at high speed, then trimming to final dimensions on the same machine. The systems process high-temperature thermoplastic composites suitable for molds and tooling, producing solid, virtually void-free structures that can sustain vacuum in an autoclave [93092128]. Available build volumes extend up to 40 feet in length [93092128].
+### Airbus Wire-DED Titanium Printing
+Airbus utilizes wire-Directed Energy Deposition (w-DED) to "grow" large structural titanium parts up to seven meters long [f6a5e0de]. This robotic arm-based technology melts titanium wire with a laser or plasma beam to create near-net-shape "blanks" [f6a5e0de]. This process significantly improves the "buy-to-fly" ratio by preventing the 80–95% material waste common in traditional forging and machining [f6a5e0de].
 
-### Legacy Industries
+## Types of Aerospace Tooling
 
-Legacy Industries operates both Thermwood LSAM systems (240" x 120" x 60" envelope) and Stratasys F900 FDM printers (36" x 24" x 36" envelope). Their LSAM can extrude materials with melt temperatures up to 850F, including ABS, Polycarbonate, ULTEM, and Dahltram 350 [5f8f1c29].
+### Jigs and Alignment Aids
+*   **Drill Jigs:** Used to cut and shape materials like aluminum, composite, and titanium for fuselage maintenance and construction [b728e305]. Digital models for various drill guides are available for rapid deployment via community platforms [cb83fdc4][a1924d5a].
+*   **Welding Jigs:** Specialized devices that hold parts in alignment during high-temperature welding (MIG, TIG, or arc) to prevent thermal distortion [100ddfa0].
+*   **Alignment Jigs:** Custom jigs used to facilitate production workflows and reduce human error during part placement [b728e305].
 
-## Desktop and Mid-Scale 3D Printed Jigs and Fixtures
+### Fixtures and Work-Holding
+*   **Assembly Fixtures:** Used to position parts correctly for manual or semi-automatic assembly, ensuring dimensional consistency [100ddfa0].
+*   **Soft Jaws:** 3D-printed connectors designed to contour to complex workpiece geometries, allowing them to be held firmly in traditional vices without scratching or damaging the part surface [536421c7][87204e5d].
+*   **Inspection Fixtures:** Used to check the fit and precision of manufactured components [b728e305].
 
-### Benefits Over Traditional Manufacturing
+### Molds and Lamination Tools
+*   **Master Molds:** Used for the composite fabrication of glass or carbon fiber parts [b728e305].
+*   **Cold Lamination Tools:** Essential for applying protective film layers to aircraft fuselages at room temperature to prevent corrosion and scratches [b728e305].
+*   **Rapid Injection Tooling:** The creation of molds for short-run plastic part production, often using materials like aluminum, epoxy, or urethane to reduce lead times from months to days [3a716be8].
 
-3D printed jigs and fixtures offer several advantages over conventionally machined tooling:
+## Materials for 3D Printed Tooling
 
-- **Cost reduction**: 70-90% savings compared to outsourced machined fixtures [6681052b]
-- **Speed**: Print in hours versus days or weeks for traditional fabrication [d2dc9592]
-- **Design freedom**: Complex geometries, integrated cooling channels, and ergonomic handles that would be impossible to machine [536421c7]
-- **On-demand production**: Print only when needed, eliminating warehousing costs [6681052b]
-- **Lighter weight**: Thermoplastic jigs are significantly lighter than metal alternatives [d2dc9592]
+Aerospace tooling requires materials that can withstand various pressures, temperatures, and chemical exposures.
 
-### Materials for 3D Printed Tooling
+| Material Class | Specific Materials | Properties and Applications |
+| :--- | :--- | :--- |
+| **High-Performance Polymers** | ULTEM (PEI), PEEK | Outstanding thermal and mechanical properties; suitable for autoclave and oven tools [b728e305][ae2ddad2]. |
+| **Engineering Thermoplastics** | ABS, PC, ASA, Nylon (PA11/PA12) | ABS is common for low-temperature tooling; PC is used for mid-temperature processes; Nylon is tough and durable for production cycles [b728e305][87204e5d]. |
+| **Composites** | Carbon Fiber or Glass Fiber reinforced polymers | Increased stiffness and reduced weight; used for structural fixtures and large molds [b728e305][ae2ddad2]. |
+| **Metals** | Titanium (Ti6Al4V), Aluminum (AlSi10Mg), Inconel | Used for structural components, fuel nozzles, and high-temperature engine parts [ae2ddad2][f6a5e0de]. |
+| **Specialized** | ABS-ESD7, TPU | ABS-ESD7 is static dissipative for electronics; TPU is flexible for soft-touch applications [6681052b]. |
 
-Common materials for aerospace jigs and fixtures include:
+## Strategic and Operational Benefits
 
-| Material | Key Property | Application |
-|----------|-------------|-------------|
-| Nylon 12CF | High stiffness, heat resistant | Structural fixtures |
-| Polycarbonate | Heat resistant >120C | Mid-temperature tooling |
-| ABS-ESD7 | Static dissipative | Electronics assembly |
-| ASA | UV resistant | Outdoor fixtures |
-| ULTEM (PEI) | Outstanding thermal/mechanical | Autoclave-compatible tooling |
+*   **Cost and Lead Time Reduction:** 3D printing can reduce the cost of jigs and fixtures by 70% to 90% compared to outsourced machining [6681052b]. Lead times for complex tools can drop from months to a few weeks or even a single day [93092128][6681052b].
+*   **Weight Optimization:** 3D printed tools are often up to 80% lighter than metal counterparts, simplifying logistics and improving operator ergonomics [b728e305][d2dc9592].
+*   **Sustainability:** Additive manufacturing reduces material waste by up to 70% compared to subtractive manufacturing [b728e305].
+*   **On-Demand Manufacturing:** Printing tools only when needed reduces the requirement for physical warehouse space and inventory tracking [6681052b].
+*   **Design Consolidation:** Engineers can merge multiple separate pieces into a single, intricate 3D-printed component, simplifying the supply chain and reducing assembly labor [f6a5e0de].
 
-[6681052b] [d2dc9592]
+## Quality Standards and Certification
 
-## Airbus Wire-DED Titanium Printing
-
-Airbus has begun serial integration of wire-Directed Energy Deposition (w-DED) 3D printed titanium parts into A350 production. This technique uses a robotic arm with titanium wire, melting it layer-by-layer to create near-net-shape structural parts up to 7 meters long. The process dramatically reduces the "buy-to-fly" ratio -- traditional forging wastes 80-95% of raw titanium, while w-DED prevents most waste at source [f6a5e0de].
-
-## CNC Machined vs. 3D Printed Jigs
-
-Traditional CNC-machined jigs remain superior for high-precision, high-volume applications requiring tight tolerances and thermal stability under extreme conditions. Nickel-based superalloys are still preferred for aerospace jigs subjected to high temperatures and pressures [9656bab4]. However, 3D printing excels for prototyping, low-volume production, and applications where rapid iteration and design freedom outweigh the need for maximum durability [536421c7].
-
-## Industry Certifications
-
-Aerospace 3D printing increasingly requires formal quality certifications. A3D Manufacturing received AS9100 certification from the IAQG, ensuring all procedures and components meet the most rigorous safety and quality standards for aviation, defense, and space applications [37e3fa07]. Caracol has also qualified its production process with AS/EN 9100 certification [b728e305].
-
-## Future Outlook
-
-The trend is toward hybrid manufacturing workflows that combine additive and subtractive processes. Parts are 3D printed near-net-shape and then CNC-machined to final tolerances, capturing the speed and material efficiency of additive manufacturing while achieving the precision of traditional machining [b728e305] [93092128]. As materials science advances and build volumes increase, 3D printed tooling will continue displacing traditional methods across the aerospace supply chain.
+To meet the rigorous safety standards of the aviation industry, 3D printing providers often seek specialized certifications:
+*   **AS9100 / EN 9100:** The primary quality management standard for the aerospace industry, ensuring that components can withstand extreme atmospheric pressures and temperatures [37e3fa07][b728e305].
+*   **ISO 9001:** A general quality management standard often held by manufacturing partners in the aerospace supply chain [35b060df].
 
 ---
 
-## 3D printed wing rib templates alignment jigs
+## 3D Printed Wing Rib Templates Alignment Jigs
 
 # 3D Printed Wing Rib Templates and Alignment Jigs
 
 ## Overview
 
-3D printing has become a practical tool for creating wing ribs, alignment jigs, and assembly fixtures for model aircraft construction. The technology enables precise airfoil reproduction, rapid iteration on structural designs, and consistent production of identical parts -- capabilities that are particularly valuable for homebuilt and RC aircraft where traditional balsa-and-plywood construction meets modern CAD-driven manufacturing.
+3D printing has become a practical tool for creating wing ribs, alignment jigs, and assembly fixtures for model aircraft construction. The technology enables precise airfoil reproduction, rapid iteration on structural designs, and consistent production of identical parts—capabilities that are particularly valuable for homebuilt and RC aircraft where traditional balsa-and-plywood construction meets modern CAD-driven manufacturing [46b88e97][ce512a03].
+
+<!-- FORGE:PLACEHOLDER 1 -->
 
 ## 3D Printed Wing Ribs
 
@@ -92,65 +96,51 @@ The trend is toward hybrid manufacturing workflows that combine additive and sub
 
 Wing rib design for 3D printing follows two main approaches: ribs as structural components printed directly, and ribs as templates or jigs that guide traditional construction.
 
-**Direct-printed ribs** are used as the actual structural elements in the wing. One RC builder designed 3mm-thick ribs with an 8-inch chord using Onshape (free online CAD), incorporating slots for 1/4" balsa leading and trailing edges and a commonly available wooden yardstick as the main spar. The design proved "very nicely scalable" and performed well in flight [819909c7].
-
-**Multi-material printed ribs** represent the cutting edge of the approach. Using advanced filaments like LW-PLA (lightweight PLA), LW-ASA, and PAHT-CF (carbon fiber reinforced) on dual-material printers like the Bambu Lab H2D, builders can optimize aerodynamic structure, minimize weight, and maximize mechanical resilience in a single print [ca47c056] [b253ebc3].
+*   **Direct-printed ribs**: These are used as the actual structural elements in the wing. One RC builder designed 3mm-thick ribs with an 8-inch chord using Onshape, incorporating slots for 1/4" balsa leading and trailing edges and a wooden yardstick as the main spar [819909c7].
+*   **Multi-material printed ribs**: Using advanced filaments like LW-PLA (lightweight PLA), LW-ASA, and PAHT-CF (carbon fiber reinforced) on dual-material printers allows builders to optimize aerodynamic structure and minimize weight in a single print [ca47c056][b253ebc3]. Multi-extruder systems also allow for part identification through color-coding or the integration of flexible and rigid sections [ca47c056].
+*   **Specialized Root Ribs**: Some designs incorporate specific functional features, such as the "Carbon Bug" modified wing root rib, which includes a modeled conductor for a carbon tube spar [7d53c79b].
 
 ### Continuous Perimeter Printing (Vase Mode)
 
-Tom Stanton developed a technique for printing wing sections as one continuously extruded line using vase mode. The process involves:
+Tom Stanton developed a technique for printing wing sections as one continuously extruded line using "vase mode" to avoid the oozing issues common with lightweight PLA [eabd19a0]. The process involves:
+1.  Importing an airfoil profile from the Airfoil Tools website into Fusion 360 [eabd19a0].
+2.  Creating internal ribs in a diagonal grid pattern with lightening holes [eabd19a0].
+3.  Adding a central cylinder for a carbon fiber wing spar [eabd19a0].
+4.  Splitting the ribs into four quadrants in CAD so the slicer treats the entire structure as a continuous external perimeter [eabd19a0].
 
-1. Importing an airfoil profile from the Airfoil Tools website into Fusion 360
-2. Creating internal ribs in a diagonal grid pattern with lightening holes along the wing length
-3. Adding a central cylinder for a carbon fiber wing spar
-4. Splitting the ribs into four quadrants that combine with the outer shell
-5. Printing the entire structure as a continuous external perimeter [eabd19a0]
-
-This method is particularly effective with lightweight PLA, which can ooze badly during normal printing but performs well when extruded continuously. The technique took about three weeks of experimentation to develop and works primarily for straight wings with a continuous profile [eabd19a0].
-
-## Alignment Jigs for Wing Construction
+## Alignment Jigs and Fixtures
 
 ### Purpose and Function
 
-In model building, jigs hold and align structures during construction. A jig moves (guiding the tool or workpiece), while a fixture stays stationary [5f71994f]. For wing building, jigs ensure that ribs are correctly positioned, aligned, and spaced during assembly.
+Jigs and fixtures are manufacturing aids used to hold, support, or secure parts during assembly [46b88e97]. In model building, they ensure that ribs are correctly positioned and spaced, providing consistency across multiple parts [5f71994f]. 3D printing these tools allows for massive customization and significant cost reductions compared to traditional machining [ce512a03].
 
-The key benefit of jigs is consistency -- each item produced using a jig will be identical. Many model builders invest time in making molds and jigs specifically because they want all components to be identical, even when hand-carving individual parts would be faster [5f71994f].
+### Types of Jigs and Fixtures
+*   **Assembly Jigs**: Used to align and position components accurately during fastening or welding [ce512a03].
+*   **Bonding Jigs**: These securely hold parts together while adhesives cure, ensuring uniform joints and precise alignment [ce512a03].
+*   **Inspection Fixtures**: These hold components tightly so inspectors can measure dimensions, geometry, and surface quality [ce512a03].
+*   **Sanding and Machining Jigs**: Specialized tools, such as sanding fixtures for thin plywood or sleds for table saws, improve the efficiency and safety of producing identical components [5f71994f].
 
-### 3D Printed Jigs and Fixtures for Manufacturing
+<!-- FORGE:PLACEHOLDER 2 -->
 
-3D printing has transformed jig and fixture production across manufacturing:
+## Design and Production Best Practices
 
-- **Cost**: 70-90% savings compared to outsourced machined fixtures [46b88e97]
-- **Speed**: Direct CAD-to-print workflow with typical lead time reduction from weeks to hours [ce512a03]
-- **Iteration**: Faster delivery enables more design iterations, improving performance [ce512a03]
-- **Complexity**: Internal lattice structures, integrated clamping mechanisms, and ergonomic features that would be impossible to machine [46b88e97]
+### 3D Printing Optimization
+To ensure the durability and functionality of 3D printed jigs:
+*   **Layer Adhesion**: Align the print orientation so that layers run parallel to the primary load direction to minimize weak points [ce512a03].
+*   **Stress Reduction**: Incorporate chamfers and fillets on sharp edges to distribute stress evenly and prevent fractures [ce512a03].
+*   **Integrated Hardware**: Design clamps, screws, or slots directly into the 3D model to reduce part count and simplify assembly [ce512a03].
+*   **Material Selection**: Manufacturers often use Nylon 12CF for stiffness or ABS-ESD7 for static-dissipative needs [46b88e97].
 
-### Design Best Practices
-
-When designing 3D printed jigs and fixtures:
-
-- **Print orientation**: Align layers with the primary load direction to maximize strength [ce512a03]
-- **Chamfers and fillets**: Add to all sharp edges to reduce stress concentrations [ce512a03]
-- **Integrated clamping**: Build clamps, screws, and slots directly into the design to minimize additional hardware [ce512a03]
-- **Material selection**: Nylon 12CF for high stiffness, PC for heat resistance, ABS-ESD7 for static-dissipative applications [46b88e97]
+### Production Workflow
+For builders producing multiple identical fixtures, setup is critical. Investing time in creating "jigs for making jigs"—such as table saw runners or drilling templates—can reduce production time from weeks to days [5f71994f]. 3D printing facilitates this by allowing a direct CAD-to-print workflow, reducing lead times from weeks to hours [ce512a03].
 
 ## Wing Rib Alignment Considerations
 
 ### Swept Wing Rib Orientation
-
-For swept wings, rib alignment is a significant design decision. Mark Drela recommended that the desired airfoil be perpendicular to the leading edge, based on the principle that airflow is mostly perpendicular to the LE over the critical leading edge portion of the airfoil [fc5beb8f].
-
-However, this is debated in the RC community. Some builders note that at low sweep angles, flow direction is not far from the free stream direction. Most early swept-wing fighter aircraft had ribs perpendicular to the LE, but they operated at large sweep angles around 45 degrees [fc5beb8f]. The practical compromise for most builders is to align ribs with the flight direction at low sweep angles and perpendicular to the LE at high sweep angles.
+For swept wings, rib alignment is a significant design decision. Mark Drela recommended that the airfoil be perpendicular to the leading edge (LE) because airflow is mostly perpendicular to the LE over its critical portion [fc5beb8f]. However, others argue that at low sweep angles, the flow remains closer to the free stream direction, suggesting ribs should align with the flight path [fc5beb8f].
 
 ### Airfoil Profile Tools
-
-The Profili software suite provided airfoil management tools for model builders for over 20 years, supporting CNC milling, hot wire foam cutting, and 3D printing. It has been superseded by devFoil at devcad.com, which handles wings, fuselages, and generic parts [ec5d1de5].
-
-## Production Tooling for Wing Building
-
-For builders producing multiple identical fixtures, proper tooling setup is critical. One prolific model builder described his production workflow requiring nine separate sawing operations, three drill press setups, and multiple sanding operations per fixture. After building dedicated jigs for his table saw, he could cut an entire set of fixtures in the time it previously took to cut two or three by hand [5f71994f].
-
-The lesson translates directly to 3D printing: investing time in designing proper jigs and fixtures -- even jigs for making jigs -- pays dividends when producing multiple components. 3D printing eliminates most of the setup time that makes traditional jig-making expensive for small batches [46b88e97].
+The Profili software suite, which supported CNC and 3D printing for over 20 years, has been superseded by **devFoil** at devcad.com. This new platform manages wings, fuselages, and generic parts for modern building techniques [ec5d1de5].
 
 ---
 
@@ -158,31 +148,29 @@ The lesson translates directly to 3D printing: investing time in designing prope
 
 # AA-5B Tiger Common Squawks Airworthiness Directives
 
-The AA-5B Tiger is a model of aircraft manufactured by Tiger Aircraft LLC (formerly American General Aircraft Corporation and Grumman American Aviation Corporation). Several airworthiness directives (ADs) have been issued for this model, particularly concerning structural integrity and maintenance requirements.
+The AA-5B Tiger is a model of aircraft manufactured by Tiger Aircraft LLC, a company that took over Type Certificate A16EH, which was previously held by the American General Aircraft Corporation and Grumman American Aviation Corporation [source id="8f8a4181"]. Several airworthiness directives (ADs) have been issued for this model, particularly concerning structural integrity and maintenance requirements to prevent catastrophic failure [source id="8f8a4181"].
 
 ## Airworthiness Directives Overview
 
-In a proposed rulemaking issued on May 19, 2005, the Federal Aviation Administration (FAA) proposed to revise Airworthiness Directive (AD) 95-19-15, which applies to all Tiger Aircraft LLC Models AA-5, AA-5A, AA-5B, and AG-5B airplanes. This AD was initially issued to address issues related to the wing attach shoulder bolts and spar clearance.
+In a proposed rulemaking issued on May 19, 2005, the Federal Aviation Administration (FAA) proposed to revise Airworthiness Directive (AD) 95-19-15, identified by Directorate Identifier 94–CE–15–AD [source id="8f8a4181"]. This AD applies to all Tiger Aircraft LLC Models AA-5, AA-5A, AA-5B, and AG-5B airplanes [source id="8f8a4181"]. The directive was initially issued to address critical issues related to the wing attach shoulder bolts and spar clearance [source id="8f8a4181"].
 
-According to the notice, AD 95-19-15 required inspection of the wing attach shoulder bolts for fretting, scoring, wear, or enlarged mounting holes and replacement of any damaged parts. Additionally, it required repair of any damaged areas and inspection of the wing spar at the center spar clearance gap for excessive clearance, with shimming of the spar if necessary [source id="8f8a4181"].
+## Wing Attach Shoulder Bolt and Spar Inspections
+
+According to the notice, AD 95-19-15 requires a detailed inspection of the wing attach shoulder bolts for damage, specifically looking for fretting, scoring, wear, or mounting holes that have become enlarged or elongated [source id="8f8a4181"]. If any such damage is detected, the directive mandates the replacement of damaged parts and the repair of affected areas [source id="8f8a4181"]. 
+
+Additionally, the AD requires an inspection of the wing spar at the center spar clearance gap to identify excessive clearance [source id="8f8a4181"]. If excessive clearance is found, the spar must be shimmed [source id="8f8a4181"]. These actions are intended to prevent wing attach shoulder bolt failure, which could lead to structural damage of the wing or fuselage and potentially result in the total failure of the aircraft structure [source id="8f8a4181"].
 
 ## Applicability and Modifications
 
-The proposed AD aimed to update the applicability of AD 95-19-15 by limiting the serial numbers for Model AG-5B airplanes. This modification was made in response to new service information received by the FAA, which indicated that not all AG-5B aircraft were subject to the same structural concerns as previously identified.
-
-The purpose of this revised AD was to prevent wing attach shoulder bolt failure, which could lead to structural damage of the wing/fuselage and potentially result in failure [source id="8f8a4181"].
+The 2005 proposed AD aimed to update the applicability of AD 95-19-15 by limiting the specific serial numbers for Model AG-5B airplanes [source id="8f8a4181"]. This modification was prompted by new service information evaluated by the FAA, which indicated that the previous applicability for the AG-5B model needed refinement [source id="8f8a4181"]. Despite these changes for the AG-5B, the proposed AD retained all the original inspection and repair actions for the AA-5, AA-5A, and AA-5B models [source id="8f8a4181"].
 
 ## Comments and Public Participation
 
-The FAA invited public comments on the proposed AD, with a deadline of July 18, 2005. Comments could be submitted through various channels including the DOT Docket website, regulations.gov, mail, fax, or hand delivery to the Docket Management Facility in Washington, DC.
-
-The FAA also encouraged submission of written relevant data, views, or arguments regarding the proposal. Comments were to include the docket number "FAA–2005–20968; Directorate Identifier 94–CE–15–AD" at the beginning of each submission [source id="8f8a4181"].
+The FAA invited public comments on the proposed AD, setting a deadline of July 18, 2005 [source id="8f8a4181"]. Interested parties were encouraged to submit relevant data, views, or arguments through various channels, including the DOT Docket website, the government-wide rulemaking portal (regulations.gov), mail, fax, or hand delivery to the Docket Management Facility in Washington, DC [source id="8f8a4181"]. Submissions were required to include the docket number "FAA–2005–20968; Directorate Identifier 94–CE–15–AD" [source id="8f8a4181"].
 
 ## Contact Information
 
-For further information regarding this proposed AD, individuals were directed to contact Richard Beckwith, Aerospace Engineer, at 1600 Stewart Avenue, Suite 410, Westbury, NY 11590. Contact details included a telephone number (516–794–5531) and facsimile number (516–794–5531) [source id="8f8a4181"].
-
-To obtain the service information identified in this proposed AD, individuals were instructed to contact American General Aircraft Corporation at P.O. Box 5737, Greenville, MS 38704 [source id="8f8a4181"].
+For technical inquiries regarding the proposed AD, the FAA directed individuals to Richard Beckwith, an Aerospace Engineer based in Westbury, NY, reachable at 516–794–5531 [source id="8f8a4181"]. To obtain the specific service information referenced in the directive, individuals were instructed to contact the American General Aircraft Corporation in Greenville, MS [source id="8f8a4181"].
 
 <!-- FORGE:PLACEHOLDER source_id="29bfc95c" -->
 <!-- FORGE:PLACEHOLDER source_id="8f8a4181" -->

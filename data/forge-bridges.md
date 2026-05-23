@@ -82,6 +82,118 @@ The bridge between these domains is built on a high-performance tech stack and a
 
 ---
 
+## AI hedge fund multi-agent portfolio management <-> behavioral alpha trading psychology systematic investing
+
+---
+all_disputed: false
+changes_expert_thinking: false
+clean_sources:
+- 17ce803a-myits-co
+- 30a4b103-alphaagents-large-language-model-based-multi-agents-for-equi
+- 907070a6-tradetron-tech
+- c5c01595-pure-bit-edu-cn
+- cb5d9da8-skila-ai
+- d17edb62-academia-edu
+disputed_sources:
+- 0674a190-github-com
+- 08501eb4-optionalpha-com
+- 09a7d68a-arcadiawm-com
+- 10b5f3df-newclawtimes-com
+- 15a445d5-substack-com
+- 25dca98a-tradingsim-com
+- 2db4b7a6-blocmates-com
+- 2eab83e0-openai-com
+- 422b708b-nurp-com
+- 45139feb-deepwiki-com
+- 48469c94-medium-com
+- 528f2276-wikipedia-org
+- 5cd94bf3-quanttrix-io
+- 6aa5778a-tradingmarkets-com
+- 6af04512-britannica-com
+- 6b2271fd-swarmalpha-i-o-swarm-intelligence-opinions
+- 6c4e1d30-braxtontulin-com
+- 73b1ee64-digiqt-com
+- 867d0c85-towardsai-net
+- a5921ff7-investopedia-com
+- b062e87c-collinseow-com
+- b38252bf-modernize-yourinvestment-fundwith-ai-agentsdeploy-in-days
+- b5159153-howardcmfunds-com
+- b6c3a4c7-thrive-fi
+- b7feb835-wikipedia-org
+- bd15c49b-medium-com
+- c3130e1f-ai-hedge-fund
+- ce372d92-dredyson-com
+- ce3cceea-tiomarkets-com
+- ceff8cb0-parthsawhney-com
+- e029887f-stocksageai-com
+- e6a4b275-beyondetfs-com
+- e7faa184-johnlothiannews-com
+- efdef775-capital-com
+- fa71f483-optionalpha-com
+- feffdae5-optimizedportfolio-com
+fact_check_notes:
+- "The bridge conflates 'Two Sigma-style architectures' with LLM multi-agent systems\
+  \ \u2014 Two Sigma is a quantitative hedge fund known for statistical factor models,\
+  \ not LLM agent orchestration. The mapping is suggestive but imprecise."
+- The 21 overlapping concepts / cos sim 0.613 figures appear to be internal bridge
+  pipeline metadata and cannot be independently verified.
+- Research questions posed in the bridge note were not treated as factual claims since
+  they are explicitly framed as open questions.
+- "The '~2x loss aversion' ratio is verified as common knowledge though the precise\
+  \ multiplier varies across studies (typically 1.5x\u20132.5x); ~2x is the canonical\
+  \ shorthand."
+- "The shared entity set between the two topics has 21 overlapping concepts with cosine\
+  \ similarity of 0.613: This is a suspiciously precise quantitative claim about internal\
+  \ bridge metadata (entity extraction and embedding similarity scores). It cannot\
+  \ be assessed from the grounding or domain knowledge \u2014 it reflects a specific\
+  \ system computation."
+- 'HFT firms and S&P 500 index fund arbitrageurs both lose to the same meta-bias:
+  confusing backtest edge with real edge: This is a strong and specific claim about
+  HFT firms being systematically vulnerable to backtest overfitting. HFT firms are
+  known for extremely rigorous out-of-sample validation and live-trading confirmation.
+  While backtest overfitting is a real problem generally, asserting HFT firms specifically
+  succumb to it at the same rate as index arbitrageurs would raise eyebrows among
+  practitioners.'
+- "Multi-agent AI portfolio management is behavioral finance's industrial implementation:\
+  \ This is the bridge's core synthetic thesis \u2014 a novel cross-domain connection\
+  \ asserting equivalence between two fields. While conceptually interesting, it is\
+  \ neither established domain knowledge nor directly grounded. A domain expert in\
+  \ either AI systems or behavioral finance might push back on the equivalence claim\
+  \ as an overstatement."
+fact_check_status: passed
+generated_at: '2026-04-22T04:19:33.878533+00:00'
+model: opus
+rubric_version: '1.0'
+score: 8.5
+testable_claim: false
+---
+
+# Bridge: AI Hedge Fund Multi-Agent Portfolio Management ↔ Behavioral Alpha Trading Psychology
+
+## Shared Foundation
+
+These two domains converge on a single unresolved question: **where does alpha actually come from, and can it be systematized?** Both operate on the same substrate — the **stock market** shaped by **cognitive biases**, **loss aversion**, and **prospect theory** (Kahneman & Tversky) — but approach it from opposite ends. Multi-agent AI hedge funds (Two Sigma-style architectures) decompose the investment process into specialized agents (**risk manager**, **portfolio manager**, sentiment analyst, technical/fundamental analysts) that mirror the cognitive division of labor a disciplined human trader imposes on themselves. Behavioral alpha frameworks, meanwhile, treat the human trader as the *source* of exploitable inefficiency — the biases that AI agents are explicitly engineered *not* to have. The shared entity set (21 overlapping concepts, cos sim 0.613) suggests these are not parallel fields but the same field viewed from the exploiter and the exploited side of the trade.
+
+## Cross-Domain Insights
+
+- **Multi-agent architectures are behavioral finance made executable.** When an AI hedge fund assigns separate agents to fundamental analysis, technical analysis, and risk management, it is hard-coding the very cognitive separation that behavioral finance says humans fail to maintain. The agent boundary *is* the bias firewall. This reframes agent design as applied prospect theory: each agent's loss function is a deliberate choice about which human bias to eliminate.
+- **Loss aversion is a feature when encoded, a bug when felt.** Kahneman's asymmetry (losses hurt ~2x gains) is catastrophic for discretionary traders but becomes a legitimate risk-parity prior when baked into an RL reward function or a risk manager agent's constraint. The same mechanism that produces behavioral alpha on one side of the trade produces systematic risk discipline on the other.
+- **Backtesting engines encode the bias they test against.** Backtests inherit survivorship bias, look-ahead bias, and overfitting — cognitive biases of the *researcher*, not the market. Behavioral finance literature on researcher degrees of freedom (Kahneman's "System 1" in the ML pipeline) directly maps to ML hygiene practices in quant shops. HFT firms and S&P 500 index fund arbitrageurs both lose to the same meta-bias: confusing backtest edge with real edge.
+
+## Research Questions Spanning Both Domains
+
+- Can a multi-agent hedge fund **explicitly model the behavioral biases of its counterparties** (retail flow, discretionary PMs) as a first-class signal, rather than relying on price/volume proxies? What would a "Kahneman agent" look like whose job is to predict where humans will capitulate?
+- Do **LLM-based agents inherit the biases of their training corpora** (financial news, analyst reports written by humans with loss aversion)? If Sonnet/Opus agents trained on Bloomberg text exhibit disposition effect or anchoring in their recommendations, does that destroy the bias-firewall premise of multi-agent design?
+- What is the **optimal human-in-the-loop boundary** for an AI hedge fund given what we know about when human judgment adds alpha (regime changes, narrative shifts) versus subtracts it (trade execution, position sizing)?
+- Does **HFT alpha decay at the same rate as behavioral alpha**, and if so, does this imply both are drawing from the same underlying pool of human cognitive inefficiency rather than being structurally distinct edges?
+- Can Two Sigma-style factor attribution be used to **decompose the P&L of a discretionary trader into bias-exposure factors** (loss aversion factor, anchoring factor, recency factor), turning behavioral finance into a tradable style box?
+
+## Synthesis
+
+The non-obvious connection: **multi-agent AI portfolio management is not competing with behavioral finance — it is behavioral finance's industrial implementation.** Every agent boundary is a debiasing decision; every loss function is a prospect-theoretic statement about asymmetric preference. The interesting frontier isn't building smarter agents, it's building agents that know *which* human bias they are monetizing at any given moment — turning Kahneman's taxonomy into a signal library.
+
+---
+
 ## AMD EPYC Siena SP6 homelab server build <-> DDR5 ECC RDIMM compatibility EPYC server
 
 # Bridge Note: AMD EPYC Server Hardware and Memory Compatibility
@@ -910,6 +1022,251 @@ The practical prescription: during paper trading, deliberately introduce session
 
 ---
 
+## local LLM inference optimization quantization FP4 <-> Ahmad Osman serving AI from basement homelab
+
+---
+all_disputed: false
+changes_expert_thinking: false
+clean_sources:
+- 012b85a2-unveiling-the-potential-of-quantization-with-mxfp4-strategie
+- 1ec2a6a5-arxiv-org
+- 2f49b50f-nvidia-com
+- 62a2de51-edge-ai-vision-com
+- 7b53b833-openvino-blog-q3-24-technology-update-low-precision-and-mode
+- ad634030-marktechpost-com
+- b243b929-hgpu-org
+- c5aceb2d-redhat-com
+- d2b1d74d-optimizing-large-language-model-training-using-fp4-quantizat
+disputed_sources:
+- 018d7a1a-ionio-ai
+- 08789dc8-medium-com
+- 162bca95-nvidia-com
+- 1e99882d-ahmadosman-com
+- 387046cb-ahmadosman-com
+- 3953b33b-smol-ai
+- 41e18d67-projectnomad-us
+- 4b7ea873-ahmadosman-com
+- 5035fa34-ahmadosman-com
+- 54c91ad0-roadtohomelab-blog
+- 552bd11e-github-com
+- 579c9cf8-ionio-ai
+- 5e38ed9f-ycombinator-com
+- 611a54b9-ahmadosman-com
+- 63c9ef8e-yourdomain-com
+- 71e5674b-github-com
+- 78366ea4-ahmadosman-com
+- 7b85cfe8-github-io
+- 85072348-cometapi-com
+- 864801bc-dasroot-net
+- 8b042677-ahmadosman-com
+- 96e99cd5-owlbuddy-com
+- 9702244b-stackoverflow-com
+- 972bf077-olav-ninja
+- 9db7b2ad-ahmadosman-com
+- a0af1636-ahmadosman-com
+- a84d9764-hackernoon-com
+- bd70273d-month-december-2025
+- c869f8b8-modelcontextprotocol-io
+- d9dfd7c3-prohomelab-com
+- dcd9164e-aiserver-eu
+- e9e7d316-quantumzeitgeist-com
+fact_check_notes:
+- "The bridge note conflates Ahmad Osman specifically with the broader homelab community\
+  \ in several claims\u2014Osman's personal hardware specs are unverifiable from grounding\
+  \ while community behavior claims are plausible but imprecise."
+- The '<1% quality loss' claim for Q4_K_M is the most technically suspect claim; quantization
+  quality loss is highly task- and model-dependent and the arxiv grounding actually
+  flags quantization error as a significant challenge.
+- The cosine similarity and shared entity count (0.62, 19 entities) are internal Forge
+  system outputs and cannot be independently verified.
+- 'The cosine similarity between these two domains is 0.62 with 19 shared entities:
+  This is an internal bridge-scoring metric generated by the Forge system. It cannot
+  be verified from the provided grounding or any external source.'
+- "AWQ/GGUF Q4_K_M quantization reduces VRAM requirements by 4\u20138x with less than\
+  \ 1% quality loss on most benchmarks: The 4\u20138x VRAM reduction is plausible\
+  \ (INT4 vs FP16 is theoretically 4x, overhead varies). However, the '<1% quality\
+  \ loss on most benchmarks' is an overly precise and generous claim\u2014quality\
+  \ loss varies significantly by model, task type, and benchmark. The grounding mentions\
+  \ 'significant quantization errors' as a challenge for FP4. Domain experts would\
+  \ raise an eyebrow at '<1%' as a universal claim."
+- 'Homelabbers are ''the first cohort outside hyperscalers who actually care about
+  expert-routing-aware serving'': This overclaims. Enterprise ML engineers, cloud
+  providers, and academic researchers also care deeply about MoE routing-aware serving.
+  Homelabbers are one motivated cohort, not the exclusive first outside hyperscalers.'
+- 'The lag between a paper being published and being available in llama.cpp as a GGUF
+  is now days, not quarters: While the community has gotten dramatically faster at
+  implementing and quantizing new models, ''days'' is a specific claim that depends
+  on model size, architecture novelty, and community attention. For some models it''s
+  true; for others it takes longer. Not universally verifiable.'
+- 'Homelab operators run new quantizations within hours of release and file issues
+  on llama.cpp/vLLM/SGLang repos: Plausible characterization of the active homelab
+  community, but ''within hours'' is specific and the claim about systematic issue-filing
+  as a feedback loop to research is an inference not directly supported by grounding.'
+- 'Ahmad Osman has a 4x RTX 6000 Ada homelab rig next to a water heater: The grounding
+  includes a HackerNews post about a homelab build (item 41481852) and ahmadosman.com,
+  but neither source in the grounding confirms these specific hardware specs. The
+  RTX 6000 Ada quantity and the water heater detail are not verifiable from the provided
+  sources.'
+- 'The homelab builder community generates benchmarking data that constitutes a ''bidirectional
+  research pipeline'' informing quantization algorithm design: While homelab benchmarks
+  do surface real-world quality issues, describing this as a formal ''bidirectional
+  research pipeline'' is an analytical claim that overstates the structured feedback
+  relationship. The community influence is real but informal and indirect.'
+fact_check_status: passed
+generated_at: '2026-04-22T04:29:13.063768+00:00'
+model: opus
+rubric_version: '1.0'
+score: 6.5
+testable_claim: false
+---
+
+# Bridge: Local LLM Inference Optimization (FP4/Quantization) ↔ Ahmad Osman's Basement Homelab AI
+
+## Shared Ground
+
+Both domains orbit the same technical stack and the same animating question: *how do you run frontier-class LLMs without frontier-class infrastructure?* The shared entity list reads like a homelabber's bill of materials meeting a quantization researcher's toolchain: **vLLM, SGLang, llama.cpp, Ollama** for serving; **AWQ, GGUF** for weight compression; **Hugging Face** as the distribution substrate; **DeepSeek, Llama (Meta), MoEs** as the target model families; **NVIDIA + PyTorch** as the compute floor. The academic/industry discourse around FP4 and post-training quantization is the *theory* that makes Osman's basement practical — you cannot serve a 671B-parameter DeepSeek V3 or a Llama 4 MoE from a home rack without aggressive quantization, speculative decoding, and MoE-aware memory offload.
+
+The 0.62 cosine similarity with 19 shared entities is the signature of two communities that use the *same vocabulary* but publish in different venues: one writes arXiv papers and vLLM PRs, the other writes blog posts, YouTube teardowns, and X threads about power draw, PCIe lanes, and cooling a 4x RTX 6000 Ada rig next to a water heater.
+
+## Cross-Domain Insights
+
+- **FP4 is the bridge technology that makes homelab serving economically rational.** NVIDIA Blackwell's native FP4 tensor cores + Hopper FP8 + AWQ/GGUF Q4_K_M quantization collapse the VRAM requirement for frontier models by 4–8x with <1% quality loss on most benchmarks. Osman's class of builder is effectively running the output of quantization research papers *as infrastructure*. The lag between "paper published" and "available in llama.cpp as a GGUF" is now days, not quarters.
+- **MoE architectures invert the homelab calculus.** A dense 70B needs ~140GB at FP16. A 671B MoE (DeepSeek V3) with 37B active parameters can be *cheaper* to serve at home than a dense 70B if you have fast DDR5 + NVMe offload, because only expert weights for active routes need to be GPU-resident. Homelabbers are the first cohort outside hyperscalers who actually *care* about expert-routing-aware serving — which is exactly what vLLM and SGLang have been racing to optimize.
+- **The feedback loop is tighter than in enterprise.** Osman's audience runs new quants within hours of release, files issues on llama.cpp / vLLM / SGLang repos, and generates the benchmarking data that informs the next round of quantization papers. This is a genuine bidirectional research pipeline — not just "consumers of research" but a distributed eval harness for production-grade quantization.
+
+## Synthesis Opportunities
+
+1. **Homelab-as-eval-harness**: Homelab deployments surface *real* quantization quality regressions (long-context degradation, tool-use failures, multi-turn coherence loss under Q3/Q2) that academic benchmarks miss. There's a research paper waiting in aggregating Osman-class deployment telemetry.
+2. **Cost-parity crossover analysis**: At what model size + utilization rate does a basement 4xRTX 6000 Ada rig beat Claude/GPT-4o API pricing? FP4 shifts this crossover meaningfully left.
+3. **Power-per-token as a first-class metric**: Homelabbers care about watts; quantization papers report accuracy and throughput. Merging these would produce the most useful optimization target for the next generation of inference engines.
+
+## Research Questions Spanning Both Domains
+
+- How does FP4 (Blackwell) vs AWQ-INT4 vs GGUF Q4_K_M compare on identical DeepSeek V3 / Llama 4 workloads when measured on a consumer-accessible rig (2–8 GPUs, consumer PSU)?
+- What is the quality-vs-VRAM Pareto frontier for MoE models under expert-offload serving in vLLM / SGLang, and where does a homelab configuration dominate cloud API cost?
+- Can homelab operators' published benchmarks be structured into a standardized dataset that feeds back into quantization algorithm design (i.e., which layers/experts are most quantization-sensitive in real workloads)?
+- What is the minimum viable homelab configuration for serving a 70B-class model at GPT-4o-equivalent latency and quality, and how does that bar move each quarter as quantization research advances?
+- How do speculative decoding + quantization interact on constrained hardware — are the gains additive, or does aggressive quantization of the draft model kill acceptance rates?
+
+---
+
+## local LLM inference optimization quantization FP4 <-> vLLM tensor parallelism multi-GPU serving setup
+
+---
+all_disputed: false
+changes_expert_thinking: false
+clean_sources:
+- 012b85a2-unveiling-the-potential-of-quantization-with-mxfp4-strategie
+- 1ec2a6a5-arxiv-org
+- 2f49b50f-nvidia-com
+- 62a2de51-edge-ai-vision-com
+- 7b53b833-openvino-blog-q3-24-technology-update-low-precision-and-mode
+- 99539928-parallel-track-transformers-enabling-fast-gpu-inference-with
+- ad634030-marktechpost-com
+- b243b929-hgpu-org
+- c5aceb2d-redhat-com
+- d2b1d74d-optimizing-large-language-model-training-using-fp4-quantizat
+disputed_sources:
+- 018d7a1a-ionio-ai
+- 05eaff2a-blogs-amd-com
+- 08789dc8-medium-com
+- 162bca95-nvidia-com
+- 19321739-medium-com
+- 1b3bdf81-markaicode-com
+- 1d05837d-github-com
+- 29ead1d9-sitepoint-com
+- 32b8c68b-distributed-inference-and-serving
+- 3953b33b-smol-ai
+- 505f3f78-huggingface-co
+- 513faa9f-deepwiki-com
+- 579c9cf8-ionio-ai
+- 5c64d2a6-isambard-ac-uk
+- 6090e3a6-docs-ray-io
+- 63c9ef8e-yourdomain-com
+- 64329941-blogs-amd-com
+- 71e5674b-github-com
+- 734d835c-github-com
+- 782a0d83-markaicode-com
+- 7b85cfe8-github-io
+- 85072348-cometapi-com
+- 8610aa65-welcome-to-vllm
+- 864801bc-dasroot-net
+- 8c32e6a2-vllm-ai
+- 8c51bfa3-vllm-ai
+- 96e99cd5-owlbuddy-com
+- 99352a19-vllm-ai
+- a5d2e692-stackoverflow-com
+- a84d9764-hackernoon-com
+- b1257d98-inferless-com
+- b5d37edd-vllm-ai
+- d77442d3-docs-amd-com
+- e4f309d8-sitepoint-com
+- e5a09245-groveai-io
+- e9e7d316-quantumzeitgeist-com
+fact_check_notes:
+- The bridge note is technically sophisticated and largely accurate. Most claims are
+  either grounded in the provided sources or reflect well-established common knowledge
+  in LLM serving.
+- "The two most uncertain claims both involve specific performance/topology assertions\
+  \ (TP=8\u2192TP=4 transition, NF4 speed in expert paths) that are directionally\
+  \ plausible but stated with more specificity than the evidence supports."
+- "The claim that Megatron-LM is the 'intellectual ancestor' of vLLM's TP is directly\
+  \ confirmed by grounding which states vLLM uses 'Megatron-LM's tensor parallel algorithm'\
+  \ \u2014 this is stronger than ancestry, it's direct adoption."
+- GGUF partial support in vLLM is accurate as of the knowledge cutoff; this is an
+  evolving area but the characterization as a practical boundary between single-GPU
+  and sharded stacks is a fair practitioner observation.
+- "The bridge correctly identifies that quantization format selection has topology\
+  \ implications (affecting GPU count needed) \u2014 this is a non-obvious insight\
+  \ that holds up under scrutiny."
+- "A DeepSeek-V3 or Llama-70B deployment that needed TP=8 at BF16 often fits at TP=4\
+  \ with FP8: While the directional logic is sound (halved weight size could halve\
+  \ GPU count needed), the specific claim that TP=8\u2192TP=4 is the typical/common\
+  \ outcome is not grounded and depends heavily on KV cache size, activation memory,\
+  \ and batch size \u2014 not just weights. A domain expert might accept the direction\
+  \ but question 'often fits at TP=4' as too specific."
+- 'AWQ/FP8 weights keep expert routing cheap in MoE models: The claim that AWQ/FP8
+  specifically ''keep routing cheap'' is plausible but vague. Expert routing cost
+  is dominated by gating computation and dispatch logic, not weight format per se.
+  A domain expert might question whether weight format is the right framing for routing
+  cost.'
+- 'bitsandbytes NF4 is usually too slow in the expert hot path for production serving
+  of MoE models: While bitsandbytes is known to be slower than native kernels (it
+  dequantizes on the fly rather than using fused kernels), the specific claim about
+  MoE expert hot paths is not grounded and is a nuanced performance assertion. Plausible
+  but not verifiable from grounding.'
+fact_check_status: passed
+generated_at: '2026-04-22T04:26:20.077723+00:00'
+model: opus
+rubric_version: '1.0'
+score: 7.5
+testable_claim: false
+---
+
+# Bridge: Quantization Frontier ↔ vLLM Multi-GPU Serving
+
+## Common Ground
+
+Both topics sit on the same production-inference stack but approach the throughput problem from opposite axes. **Quantization / FP4** compresses weights (and increasingly activations) so a model fits in less VRAM and moves fewer bytes per token; **tensor parallelism in vLLM** shards those weights across multiple GPUs so a model that doesn't fit in one device can still serve at low latency. The shared entity list — `fp4`, `fp8`, `awq`, `gguf`, `bitsandbytes`, `vllm`, `sglang`, `deepseek-v3/r1`, `a100`, `hopper gpus`, `megatron-lm`, `pytorch` — reflects this: they are the ingredient list for running large MoE and dense models (Llama, DeepSeek, Mistral) on real hardware.
+
+The deeper overlap is **format and kernel compatibility**. vLLM's tensor-parallel path must execute whatever quantization scheme the weights arrive in: AWQ and GPTQ for INT4, FP8 (E4M3/E5M2) natively on Hopper, FP4 on Blackwell, and bitsandbytes NF4/Int8 as a PyTorch-level fallback. GGUF belongs to the llama.cpp ecosystem and is only partially supported in vLLM — a practical wedge between "single-GPU hobbyist" and "sharded server" stacks. Megatron-LM's tensor-parallel primitives are the intellectual ancestor of vLLM's TP implementation, and UC Berkeley (vLLM's origin) plus NVIDIA (TransformerEngine, cuBLAS FP8/FP4 kernels) are the institutions bridging the two topics.
+
+## Cross-Domain Insights
+
+- **Quantization changes the TP sweet spot.** FP8 on Hopper roughly halves the per-GPU weight footprint vs BF16, so a DeepSeek-V3 or Llama-70B deployment that needed TP=8 at BF16 often fits at TP=4 with FP8 — fewer GPUs, less NVLink traffic, better per-token latency. FP4 pushes this further on Blackwell. The corollary: choosing a quant format is not just a memory decision, it is a topology decision.
+- **MoEs stress both axes simultaneously.** DeepSeek-V3/R1 and Mixtral have huge parameter counts but small active paths per token. Expert parallelism (EP) composes with TP in vLLM, and quantization decides whether experts are co-located or sharded. AWQ/FP8 weights keep routing cheap; bitsandbytes NF4 is usually too slow in the expert hot path for production serving.
+- **Activation precision is the next bottleneck.** Weight-only INT4 (AWQ, GPTQ) was the 2023–2024 default; FP8 weight+activation and FP4 weight-only are the 2025 frontier. On multi-GPU TP, activation quantization also reduces all-reduce bandwidth, not just VRAM — a benefit invisible when you look at quantization in a single-GPU context.
+
+## Research Questions Spanning Both Domains
+
+1. At what model scale does FP8 TP=4 beat BF16 TP=8 on Hopper for end-to-end p50/p99 latency at realistic batch sizes — and does the crossover move with sequence length?
+2. For MoE models served in vLLM, does combining expert parallelism with per-expert FP4 weights preserve routing quality, or do low-utilization experts suffer disproportionate accuracy loss from aggressive quantization?
+3. How much of vLLM's TP all-reduce cost can be eliminated by FP8 activation quantization on the communication path, and where does that trade off against accumulator precision in attention?
+4. Can GGUF-quantized weights (llama.cpp lineage) be loaded into vLLM's paged-attention + TP runtime without a full re-quantization pass, or is AWQ/GPTQ the only viable bridge between single-GPU and sharded deployments?
+5. For DeepSeek-V3/R1 on A100 (no native FP8), what is the best achievable throughput using AWQ INT4 + TP vs renting Hopper for FP8 + smaller TP — a cost-per-million-tokens comparison that directly couples quantization and serving topology.
+
+---
+
 ## local-llm-inference-optimization-quantization-fp4 <-> aircraft-llc-ownership-tax-depreciation-section-168k
 
 ---
@@ -1358,6 +1715,85 @@ It also suggests that the current practice of behavioral coaching (teaching trad
 ## Sources
 - [[vLLM tensor parallelism multi-GPU serving setup]]
 - [[behavioral alpha trading psychology systematic investing]]
+
+---
+
+## whatamivotingon-c3-c4-cost-allocation <-> aircraft-llc-ownership-tax-depreciation-section-168k
+
+---
+bridge_slug: whatamivotingon-c3-c4-cost-allocation--aircraft-llc-ownership-tax-depreciation-section-168k
+topic_a: whatamivotingon C3/C4 cost allocation
+topic_b: aircraft LLC ownership tax depreciation section 168k
+shared_entities: [IRS, entity structuring, arm's-length pricing, audit defense, documentation requirements, form-over-substance risk]
+generated_at: '2026-04-18T17:00:00Z'
+generated_by: claude-sonnet-4-6 (subagent)
+---
+
+# Whatamivotingon C3/C4 Cost Allocation ⟷ Aircraft LLC Ownership & Section 168(k) Depreciation
+
+## The Connection
+
+On the surface, a civic tech nonprofit structuring a 501(c)(3)/501(c)(4) affiliate relationship and a pilot setting up an aircraft LLC to capture bonus depreciation under Section 168(k) have nothing in common. One is tax-exempt law; the other is business property deductions. One involves ballot measure analysis; the other involves an airplane. But both are exercises in the same underlying discipline: choosing an entity structure that unlocks a specific IRS-defined tax treatment, then constructing and maintaining that structure with enough documented substance to survive an audit. The IRS rule that governs both situations is the same rule stated two different ways — the form-over-substance doctrine. If a structure exists primarily on paper, the IRS will disregard it, reclassify the transactions, and impose back taxes, penalties, and interest. Surviving that challenge requires that the structure actually function the way its legal form implies.
+
+In the C3/C4 context, the IRS permits a 501(c)(3) to share staff, facilities, and infrastructure with a closely affiliated 501(c)(4), but it requires that the C4 pay the C3 at arm's-length rates for those shared services. The mechanism is a written shared services agreement executed before services begin, with cost allocation methodologies — usage metering, time tracking, square footage, FTE ratios — chosen to reflect what unrelated parties would actually charge each other. The IRS does not mandate a specific method, but it requires consistency and contemporaneous documentation. Delays in reimbursement (beyond 30–60 days) are read as implicit subsidies, which can taint the C3's exempt status. The structure is legally valid; the question is whether it was actually operated as described or whether it was a nominal arrangement masking an undivided operation. In the aircraft LLC context, the IRS applies precisely the same scrutiny. An aircraft held in an LLC for liability isolation or ownership management is legally valid, but the LLC creates passive activity issues under IRC Section 469 and related-party leasing problems under Section 280F that can eliminate the bonus depreciation the structure was designed to capture. The IRS audit campaign launched in February 2024 targeting business aircraft deductions is explicitly looking for structures that exist on paper as "business use" but function in practice as personal transportation — the aviation equivalent of the C3/C4 firewall problem.
+
+The arm's-length pricing requirement appears identically in both contexts, though it is called by different names. In C3/C4 shared services, arm's-length pricing means the C4 pays the C3 what an unrelated vendor would charge for the same API access, the same office space, the same staff time. In aircraft LLC structures, arm's-length pricing appears as the dry-lease rate: if the LLC leases the aircraft back to the operating company, the lease rate must reflect what an unrelated lessor would charge. If the rate is too low (a common error when an owner leases to their own company at a nominal rate), the IRS can recharacterize the arrangement, pierce the LLC, and treat the aircraft as owned directly by the operating company — eliminating the liability protection and potentially disqualifying the depreciation deduction. In both cases, the IRS is asking the same question: would an unrelated party on the other side of this transaction agree to these terms? If the answer is no, the structure fails.
+
+## Why It Matters
+
+The practical implication in both cases is that the documentation requirement is not a compliance formality — it is the substance of the structure itself. A C3/C4 shared services agreement that is executed retroactively, or that specifies allocation methodologies but does not have underlying records (contemporaneous time logs, API usage reports, square footage measurements), is not a shared services agreement in any meaningful sense. It is a piece of paper. Similarly, an aircraft LLC that lacks flight logs categorizing every flight by business purpose, passenger, and route is not a business aircraft operation — it is a personal aircraft with a business deduction attached to paper that will not survive audit. The IRS EO Technical Program guidance that governs C3/C4 structures and the listed property rules under IRC Section 280F that govern aircraft both require contemporaneous records, not reconstructed ones. The word "contemporaneous" is doing heavy lifting in both regulatory frameworks: it signals that the IRS does not accept documentation created after the fact when the audit begins.
+
+The form-over-substance risk in both domains also has a common failure mode: the structure is set up correctly at inception and then allowed to drift operationally. A C3/C4 arrangement where the C4 stops reimbursing the C3 within the required window, or where staff stop logging their time across entities, begins to look like a single undivided operation regardless of the legal documents on file. An aircraft LLC where the owner stops categorizing flights — or where the business use percentage drifts below 50% without triggering a depreciation recapture analysis under Section 1245 — begins to look like personal ownership with a deduction attached. In both cases, the legal structure remains formally intact while the factual predicate for the favorable tax treatment has eroded. This is the audit risk that is hardest to manage, because it develops slowly through operational inattention rather than through a discrete wrong decision.
+
+## Open Questions
+
+- The IRS requires C3/C4 shared services agreements to be executed before services begin; aircraft LLC dry-lease agreements carry the same timing requirement. Is there a general principle that IRS anti-abuse structures must be established prospectively rather than retrospectively, and what does this imply for any entity structure created after the economic activity has already begun?
+- C3/C4 cost allocation methodologies must be "consistently applied" — the IRS allows any reasonable method but penalizes switching methods mid-year without justification. Aircraft business use must also be tracked consistently across the full year under Section 280F. What is the common thread: is the IRS more concerned about manipulation opportunities created by methodology flexibility, or about the audit intractability of comparing periods under different measurement regimes?
+- In both domains, the IRS publishes its audit focus areas in advance: the EO Technical Program publishes compliance priorities, and the 2024 aircraft audit campaign was publicly announced. Does this transparency reflect a deterrence strategy, or is it an artifact of administrative law that requires public notice before enforcement campaigns?
+- The C3/C4 structure depends on activity segregation — the C4's political activities must not bleed into C3 communications or records. Aircraft structures depend on use segregation — personal flights must not bleed into business use calculations. In both cases, the segregation is maintained at the record level, not the physical level (shared staff, shared airframe). Is there a documentation architecture that satisfies both requirements efficiently, or do they require fundamentally different record-keeping systems?
+
+## Sources
+
+- [[whatamivotingon C3/C4 cost allocation]]
+- [[aircraft LLC ownership tax depreciation section 168k]]
+
+---
+
+## whatamivotingon-c3-c4-cost-allocation <-> whatamivotingon-c3-oss-civictech-eligibility
+
+---
+bridge_slug: whatamivotingon-c3-c4-cost-allocation--whatamivotingon-c3-oss-civictech-eligibility
+topic_a: whatamivotingon C3/C4 cost allocation
+topic_b: whatamivotingon C3 OSS civic tech eligibility
+shared_entities: [501(c)(3), whatamivotingon.com]
+generated_at: '2026-04-18T17:00:00Z'
+generated_by: claude-sonnet-4-6 (subagent)
+---
+
+# Whatamivotingon C3/C4 Cost Allocation ⟷ C3 OSS Civic Tech Eligibility
+
+## The Connection
+
+Cost allocation and OSS eligibility look like two separate compliance problems — one about money flows between affiliated entities, one about whether the underlying software qualifies as charitable at all. But they are actually two load-bearing walls of the same structure. The IRS question animating both is identical: does the 501(c)(3) exist primarily to serve the public, or is it primarily serving private interests under a charitable veneer? Cost allocation answers that question for the affiliate relationship (does the C4 pay its fair share, or is the C3 secretly subsidizing political activity?). OSS eligibility answers it for the product relationship (does the open API primarily serve voters, or does it primarily serve political campaigns that happen to be the loudest users?). Fail either test and the entire C3 premise collapses — not just the specific arrangement that failed, but the tax status of the entity itself.
+
+The private benefit doctrine is the common thread. In the OSS eligibility analysis, the IRS has rejected civic tech applications where a founder's for-profit company could bid on platform contracts or where "paying customers" — political consultants, research firms — were the most natural users of the tool. In the cost allocation analysis, the same doctrine reappears in a different form: if the C4 uses the C3's API infrastructure without paying at arm's length, the C3 is effectively subsidizing partisan activity, which constitutes private benefit to the C4's advocacy operations. Usage-based API metering (the recommended cost allocation method for whatamivotingon) is not just an accounting choice — it is the mechanism that makes the private benefit doctrine survivable in both directions simultaneously. The C4 pays per call, which demonstrates arm's-length pricing for the cost allocation firewall. That same metering data also demonstrates that the civic-facing use of the API (voters, journalists, embeds) vastly outnumbers the C4's usage, which corroborates the OSS eligibility claim that the public benefit is primary and the political affiliate's benefit is incidental.
+
+## Why It Matters
+
+The non-obvious insight is that the documentation required for cost allocation compliance is also the primary evidence for OSS eligibility defense. Time tracking logs, API usage meters, and shared services agreements with explicit scope limitations all tell the same story: here is a tool built for the public, here is how we measured who uses it, here is the price the affiliated advocate paid to access it like any other customer. If the IRS ever challenged the C3's charitable purpose — the OSS eligibility question — the cost allocation records would be exhibit A in the defense. A C3 that maintains rigorous cost allocation documentation is simultaneously building the evidentiary record that its open infrastructure genuinely serves the public rather than functioning as a political subsidy machine with nonprofit branding.
+
+This also resolves a tension in the distribution strategy. whatamivotingon's embed-first, journalist-facing distribution model is not just a growth tactic — it is active OSS eligibility management. The more Substack newsletters, local news sites, and civic organizations use the widget, the clearer the evidence that the primary beneficiary is the public. The C4 affiliate's API calls become a smaller and smaller fraction of total usage over time. Combined with the metered billing that makes each C4 call a market-rate transaction, the organization ends up in a structurally defensible position: a neutral data tool that happens to have a political advocacy affiliate as one of many downstream users, rather than a political infrastructure project that claims charitable status.
+
+## Open Questions
+
+- The IRS's "exclusively charitable" operational test requires that non-exempt activities be "insubstantial." At what C4 API usage percentage does the C4's access tip from incidental to substantial — and should the shared services agreement include a usage cap that triggers renegotiation before that threshold is reached?
+- OSS eligibility analysis cites Ballotpedia, ProPublica, and OpenSecrets as comparables maintaining C3 status. Do any of these have affiliated C4 entities with metered API access, or do they maintain strict organizational separation? The cost allocation model adds complexity that these comparables may not have navigated.
+- If the C3 publishes its statutory diff data as a public database (bulk download, open API), does broad commercial availability strengthen the OSS eligibility argument (demonstrates public benefit) or weaken it (demonstrates commercial utility to political consultants)? The answer probably depends on whether usage metrics show voter-facing traffic dominating commercial traffic.
+- The 30–60 day reimbursement window for C4 payments to the C3 creates a float exposure. Does delayed payment affect the private benefit analysis for OSS eligibility, or is it purely a cost allocation compliance issue? If the C3 is effectively extending credit to the C4, that credit line itself may constitute a private benefit.
+
+## Sources
+- [[whatamivotingon C3/C4 cost allocation]]
+- [[whatamivotingon C3 OSS civic tech eligibility]]
 
 ---
 
